@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 
 public class gameplay implements ActionListener{
+  JFrame frame = new JFrame();;
   JGraphics gamePanel;
   Timer thetimer;
   String strNetText;
@@ -29,8 +30,19 @@ public class gameplay implements ActionListener{
     gamePanel = new JGraphics();
     gamePanel.setLayout(null);
     gamePanel.setPreferredSize(new Dimension(1280, 720));
+
     // SuperSocketMaster server mode
     ssm = new SuperSocketMaster(6112, this);
     ssm.connect();
+
+        frame.setContentPane(gamePanel);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
+        frame.pack();
+        frame.setVisible(true);
   } 
+
+  public static void main (String[] args){
+    new gameplay();
+  }
 }
