@@ -108,8 +108,8 @@ public class mainMenu implements ActionListener{
         SPCtextPanel1.setBounds(30, 90, 260, 30);
         connectPanel.add(SPCtextPanel1);
 
-        leftColorButton.setBounds(30, 240, 40, 60);
-        rightColorButton.setBounds(250, 240, 40, 60);
+        leftColorButton.setBounds(30, 320, 40, 60);
+        rightColorButton.setBounds(250, 320, 40, 60);
 
         leftColorButton.addActionListener(this);
         rightColorButton.addActionListener(this);
@@ -117,7 +117,7 @@ public class mainMenu implements ActionListener{
         connectPanel.add(leftColorButton);
         connectPanel.add(rightColorButton);
 
-        colorPreview.setBounds(110, 220, 100, 100);
+        colorPreview.setBounds(110, 300, 100, 100);
         colorPreview.setBackground(playerColors[currentColorIndex]);
         connectPanel.add(colorPreview);
 
