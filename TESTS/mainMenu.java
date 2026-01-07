@@ -80,7 +80,16 @@ public class mainMenu implements ActionListener{
             }else if (csChooser.getSelectedItem().toString() == "Server"){
                 ssm = new SuperSocketMaster(1234, this);
             }
+        } else if (evt.getSource() == csChooser) {
+            if (csChooser.getSelectedItem().equals("Server")) {
+                IPAdressField.setEnabled(false);
+                IPAdressField.setText("Server mode - no IP needed");
+            } else {
+                IPAdressField.setEnabled(true);
+                IPAdressField.setText("");
+            }
         }
+
         frame.revalidate();
         frame.repaint();
     }
@@ -140,6 +149,7 @@ public class mainMenu implements ActionListener{
 
         csChooser.setBounds(450, 200, 650, 60);
         connectPanel.add(csChooser);
+        csChooser.addActionListener(this);
 
         IPAdressField.setBounds(450, 300, 400, 50);
         connectPanel.add(IPAdressField);
