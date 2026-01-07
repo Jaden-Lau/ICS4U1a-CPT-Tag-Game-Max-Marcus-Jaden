@@ -20,7 +20,6 @@ public class mainMenu implements ActionListener{
     JButton instruction = new JButton("INSTRUCTIONS");
     JButton exit = new JButton("EXIT");
 
-
     //ConnectPanel
     JTextField username = new JTextField("Enter Username");
     JLabel SPCtextPanel1 = new JLabel("Select Player Color");
@@ -43,6 +42,13 @@ public class mainMenu implements ActionListener{
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
 
+    // Instructions
+    JLabel instructionsTitle = new JLabel("HOW TO PLAY");
+    JTextArea instructionsText = new JTextArea();
+    JScrollPane instructionsScroll;
+    JButton instructionsBackBtn = new JButton("BACK TO MENU");
+
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
@@ -51,6 +57,8 @@ public class mainMenu implements ActionListener{
         } else if (evt.getSource() == instruction) {
             frame.setContentPane(instructionsPanel);
         } else if (evt.getSource() == backBtn) {
+            frame.setContentPane(mainMenuPanel);
+        } else if (evt.getSource() == instructionsBackBtn) {
             frame.setContentPane(mainMenuPanel);
         } else if (evt.getSource() == exit) {
             frame.dispose();
@@ -73,11 +81,9 @@ public class mainMenu implements ActionListener{
                 ssm = new SuperSocketMaster(1234, this);
             }
         }
-
         frame.revalidate();
         frame.repaint();
     }
-
 
     public mainMenu(){
       // Main Menu
@@ -147,9 +153,56 @@ public class mainMenu implements ActionListener{
         backBtn.addActionListener(this);
         connectPanel.add(backBtn);
 
-        //Instructions Panel
+        // Instructions Panel
         instructionsPanel.setLayout(null);
         instructionsPanel.setPreferredSize(new Dimension(1280, 720));
+        instructionsPanel.setBackground(new Color(220, 220, 220));
+
+        instructionsTitle.setFont(new Font("Arial", Font.BOLD, 72));
+        instructionsTitle.setBounds(350, 30, 600, 90);
+        instructionsPanel.add(instructionsTitle);
+
+        instructionsText.setEditable(false);
+        instructionsText.setLineWrap(true);
+        instructionsText.setWrapStyleWord(true);
+        instructionsText.setFont(new Font("Arial", Font.PLAIN, 22));
+
+        instructionsText.setText(
+            "GAMEPLAY:\n\n" +
+            "This is a real-time multiplayer TAG game. One player is 'IT'. " +
+            "If you are IT, your goal is to tag another player. If you are not IT, " +
+            "your goal is to avoid being tagged.\n\n" +
+
+            "CONTROLS:\n\n" +
+            "W - Jump\n" +
+            "A - Move Left\n" +
+            "D - Move Right\n\n" +
+
+            "CONNECTION MODES:\n\n" +
+            "SERVER:\n" +
+            "Select Server mode if you are hosting the game. The server starts the game " +
+            "and waits for other players to connect.\n\n" +
+
+            "CLIENT:\n" +
+            "Select Client mode if you are joining a game. Enter the IP address of the " +
+            "server and press CONNECT.\n\n" +
+
+            "NETWORKING (SSM):\n\n" +
+            "This game uses SuperSocketMaster (SSM) to send messages between players. " +
+            "SSM is responsible for transmitting player movement, tag events, and chat " +
+            "messages in real time. Each message follows a specific format so the game " +
+            "can distinguish between gameplay data and chat data."
+        );
+
+        instructionsScroll = new JScrollPane(instructionsText);
+        instructionsScroll.setBounds(200, 150, 880, 430);
+        instructionsPanel.add(instructionsScroll);
+
+        instructionsBackBtn.setFont(newFont);
+        instructionsBackBtn.setBounds(390, 600, 500, 70);
+        instructionsBackBtn.addActionListener(this);
+        instructionsPanel.add(instructionsBackBtn);
+
 
         //Map Select Panel
         mapSelectPanel.setLayout(null);
@@ -161,8 +214,6 @@ public class mainMenu implements ActionListener{
         map2Btn.setBounds(700, 300, 300, 300);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
-        
-
 
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
