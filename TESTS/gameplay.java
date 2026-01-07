@@ -23,6 +23,7 @@ public class gameplay implements ActionListener{
         JGraphics.playerX -= 1;
       }
     }
+  }
   
   public gameplay(){
     gamePanel = new JGraphics();
