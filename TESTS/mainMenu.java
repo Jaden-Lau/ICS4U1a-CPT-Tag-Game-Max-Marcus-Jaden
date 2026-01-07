@@ -33,6 +33,10 @@ public class mainMenu implements ActionListener{
     JComboBox csChooser = new JComboBox<>(strcs);
     JTextField IPAdressField = new JTextField("Enter IP Adress");
     Font newFont = new Font("Arial", Font.BOLD, 24);
+
+    Color[] playerColors = {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW};
+    int currentColorIndex = 0;
+    JPanel colorPreview = new JPanel();
     
     //Map Select Panel
     JButton map1Btn = new JButton("map1");
@@ -53,7 +57,18 @@ public class mainMenu implements ActionListener{
             frame.dispose();
         } else if (evt.getSource() == map1Btn){
 
+        } else if (evt.getSource() == rightColorButton) {
+            currentColorIndex++;
+            if (currentColorIndex >= playerColors.length)
+                currentColorIndex = 0;
+            colorPreview.setBackground(playerColors[currentColorIndex]);
+        } else if (evt.getSource() == leftColorButton) {
+            currentColorIndex--;
+            if (currentColorIndex < 0)
+                currentColorIndex = playerColors.length - 1;
+            colorPreview.setBackground(playerColors[currentColorIndex]);
         }
+
         frame.revalidate();
         frame.repaint();
     }
@@ -81,48 +96,54 @@ public class mainMenu implements ActionListener{
         exit.setBounds(320, 550, 600, 90);
         exit.addActionListener(this);
        
-        //Connect Panel
+        //  Connect Panel
         connectPanel.setLayout(null);
         connectPanel.setPreferredSize(new Dimension(1280, 720));
-        
-        //Username
-        username.setBounds(50, 100, 225, 50);
+        connectPanel.setBackground(new Color(220, 220, 220));
+
+        // Left Sidebar
+        username.setBounds(30, 30, 260, 45);
         connectPanel.add(username);
-        
-        //SPC
-        SPCtextPanel1.setBounds(110, 150, 200, 50);
+
+        SPCtextPanel1.setBounds(30, 90, 260, 30);
         connectPanel.add(SPCtextPanel1);
-        
-        //Left and Right color
-        rightColorButton.setBounds(250, 300, 25, 50);
-        connectPanel.add(rightColorButton);
-        leftColorButton.setBounds(50, 300, 25, 50);
+
+        leftColorButton.setBounds(30, 240, 40, 60);
+        rightColorButton.setBounds(250, 240, 40, 60);
+
+        leftColorButton.addActionListener(this);
+        rightColorButton.addActionListener(this);
+
         connectPanel.add(leftColorButton);
-        
-        
-        //Save Changes
-        saveChangesButton.setBounds(75, 650, 200, 50);
+        connectPanel.add(rightColorButton);
+
+        colorPreview.setBounds(110, 220, 100, 100);
+        colorPreview.setBackground(playerColors[currentColorIndex]);
+        connectPanel.add(colorPreview);
+
+        saveChangesButton.setBounds(30, 620, 260, 50);
         connectPanel.add(saveChangesButton);
 
-        //Client server button
-        csChooser.setBounds(500, 300, 300, 50);
+        // Right Side
+        JLabel titleLabel = new JLabel("TAG GAME", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 48));
+        titleLabel.setBounds(350, 40, 850, 100);
+        connectPanel.add(titleLabel);
+
+        csChooser.setBounds(450, 200, 650, 60);
         connectPanel.add(csChooser);
 
-        //Connect button
-        connectBtn.setBounds(500, 600, 700, 100);
+        IPAdressField.setBounds(450, 300, 400, 50);
+        connectPanel.add(IPAdressField);
+
+        connectBtn.setFont(newFont);
+        connectBtn.setBounds(450, 400, 650, 80);
         connectPanel.add(connectBtn);
 
-        //IP Adress Enter
-        IPAdressField.setBounds(500, 500, 400, 50);
-        connectPanel.add(IPAdressField);
-    
-
-        //Back Button
         backBtn.setFont(newFont);
-        backBtn.setBounds(500, 650, 700, 50);
+        backBtn.setBounds(450, 520, 650, 70);
         backBtn.addActionListener(this);
         connectPanel.add(backBtn);
-        
 
         //Instructions Panel
         instructionsPanel.setLayout(null);
