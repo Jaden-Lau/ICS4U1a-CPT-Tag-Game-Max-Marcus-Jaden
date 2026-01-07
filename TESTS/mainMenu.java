@@ -35,6 +35,9 @@ public class mainMenu implements ActionListener{
     Color[] playerColors = {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW};
     int currentColorIndex = 0;
     JPanel colorPreview = new JPanel();
+
+    JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
+
     
     //Map Select Panel
     JButton map1Btn = new JButton("map1");
@@ -74,11 +77,23 @@ public class mainMenu implements ActionListener{
             if (currentColorIndex < 0)
                 currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
-        }else if (evt.getSource() == connectBtn){
-            if (csChooser.getSelectedItem().toString() == "Client"){
-                ssm = new SuperSocketMaster(IPAdressField.getText(),1234, this);
-            }else if (csChooser.getSelectedItem().toString() == "Server"){
+        }
+        
+        else if (evt.getSource() == connectBtn) {
+            if (csChooser.getSelectedItem().equals("Server")) {
+                waitingLabel.setVisible(true);
+                backBtn.setVisible(false);
+                connectBtn.setEnabled(false);
+
+                csChooser.setEnabled(false);
+                IPAdressField.setEnabled(false);
+
+                connectPanel.revalidate();
+                connectPanel.repaint();
+
                 ssm = new SuperSocketMaster(1234, this);
+            } else {
+                ssm = new SuperSocketMaster(IPAdressField.getText(),1234, this);
             }
         } else if (evt.getSource() == csChooser) {
             if (csChooser.getSelectedItem().equals("Server")) {
@@ -162,6 +177,17 @@ public class mainMenu implements ActionListener{
         backBtn.setBounds(450, 520, 650, 70);
         backBtn.addActionListener(this);
         connectPanel.add(backBtn);
+
+        waitingLabel.setForeground(Color.BLACK);
+        waitingLabel.setOpaque(true);
+        waitingLabel.setBackground(new Color(200, 200, 200));
+        waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
+        waitingLabel.setBounds(450, 440, 650, 60);
+        waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        waitingLabel.setVisible(false);
+
+        connectPanel.add(waitingLabel);
+
 
         // Instructions Panel
         instructionsPanel.setLayout(null);
