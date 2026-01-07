@@ -12,7 +12,7 @@ public class mainMenu implements ActionListener{
     JPanel instructionsPanel = new JPanel();
     JPanel connectPanel = new JPanel();
     JPanel mapSelectPanel = new JPanel();
-
+    SuperSocketMaster ssm = null;
 
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
@@ -67,6 +67,12 @@ public class mainMenu implements ActionListener{
             if (currentColorIndex < 0)
                 currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
+        }else if (evt.getSource() == connectBtn){
+            if (csChooser.getSelectedItem().toString() == "Client"){
+                ssm = new SuperSocketMaster(IPAdressField.getText(),1234, this);
+            }else if (csChooser.getSelectedItem().toString() == "Server"){
+                ssm = new SuperSocketMaster(1234, this);
+            }
         }
 
         frame.revalidate();
