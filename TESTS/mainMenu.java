@@ -26,7 +26,6 @@ public class mainMenu implements ActionListener{
     JLabel SPCtextPanel1 = new JLabel("Select Player Color");
     JButton rightColorButton = new JButton(">");
     JButton leftColorButton = new JButton("<");
-    JButton saveChangesButton = new JButton("Save Changes");
     JButton backBtn = new JButton("BACK TO MENU");
     JButton connectBtn = new JButton("CONNECT");
     String[] strcs = {"Client", "Server"};
@@ -126,9 +125,6 @@ public class mainMenu implements ActionListener{
         colorPreview.setBounds(110, 300, 100, 100);
         colorPreview.setBackground(playerColors[currentColorIndex]);
         connectPanel.add(colorPreview);
-
-        saveChangesButton.setBounds(30, 620, 260, 50);
-        connectPanel.add(saveChangesButton);
 
         // Right Side
         JLabel titleLabel = new JLabel("TAG GAME", SwingConstants.CENTER);
