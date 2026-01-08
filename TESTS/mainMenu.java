@@ -2,8 +2,10 @@ package TESTS;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
-
 
 public class mainMenu implements ActionListener{
     // Properties
@@ -12,6 +14,8 @@ public class mainMenu implements ActionListener{
     JPanel instructionsPanel = new JPanel();
     JPanel connectPanel = new JPanel();
     JPanel mapSelectPanel = new JPanel();
+
+    JPanel gamePanel = new GamePanel();
     SuperSocketMaster ssm = null;
 
     //Main Menu
@@ -37,13 +41,17 @@ public class mainMenu implements ActionListener{
     JPanel colorPreview = new JPanel();
 
     JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
-
     
     //Map Select Panel
     JButton map1Btn = new JButton("map1");
     JLabel map1NameLabel = new JLabel("Map1");
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
+    
+    // Map Properties
+    String[][] mapData = new String[16][16];
+    BufferedImage groundImg = null;
+    BufferedImage airImg = null;
 
     // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
@@ -69,11 +77,40 @@ public class mainMenu implements ActionListener{
             } 
             // CLIENT SIDE
             else {
-                if (msg.startsWith("MAP:")) {
-                    String chosenMap = msg.substring(4);
-                    System.out.println("Server chose: " + chosenMap);
+                if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
+                    String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
+                    loadMap(mapFile);
+                    
+                    // Use invokeLater to prevent the IllegalComponentStateException
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            if (gamePanel != null) {
+                                frame.setContentPane(gamePanel);
+                                frame.revalidate();
+                                frame.repaint();
+                            }
+                        }
+                    });
                 }
             }
+        }
+
+        if (evt.getSource() == map1Btn) {
+            loadMap("map1.csv");
+            if (ssm != null){
+                ssm.sendText("MAP:1");
+            }
+            frame.setContentPane(gamePanel);
+            frame.revalidate();
+            frame.repaint();
+        } else if (evt.getSource() == map2Btn) {
+            loadMap("map2.csv");
+            if (ssm != null){
+                ssm.sendText("MAP:2");
+            }
+            frame.setContentPane(gamePanel);
+            frame.revalidate();
+            frame.repaint();
         }
 
         if (evt.getSource() == startGame) {
@@ -130,14 +167,8 @@ public class mainMenu implements ActionListener{
                 IPAdressField.setEnabled(true);
                 IPAdressField.setText("");
             }
-        } else if (evt.getSource() == map1Btn) {
-            if (ssm != null) ssm.sendText("MAP:1");
-            System.out.println("Starting Map 1...");
-        } else if (evt.getSource() == map2Btn) {
-            if (ssm != null) ssm.sendText("MAP:2");
-            System.out.println("Starting Map 2...");
-        }   
-
+        }
+        
         frame.revalidate();
         frame.repaint();
     }
@@ -285,12 +316,65 @@ public class mainMenu implements ActionListener{
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
 
+        // Load the Tiles
+        try {
+            groundImg = ImageIO.read(new File("Map Tiles/ground.png"));
+            airImg = ImageIO.read(new File("Map Tiles/air.png"));
+        } catch (IOException e) {
+            System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
+        }
+
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.pack();
         frame.setVisible(true);   
+    }
+
+    private void loadMap(String fileName) {
+        File mapFile = new File("MAPS/" + fileName);
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
+            String line;
+            int row = 0;
+            while ((line = br.readLine()) != null && row < 16) {
+                String[] tiles = line.split(",");
+                for (int col = 0; col < Math.min(tiles.length, 16); col++) {
+                    mapData[row][col] = tiles[col].trim();
+                }
+                row++;
+            }
+            System.out.println("Successfully loaded: " + fileName);
+        } catch (IOException e) {
+            System.out.println("File Error: Could not find " + fileName + " in MAPS folder.");
+        }
+    }
+
+    private class GamePanel extends JPanel {
+        public GamePanel() {
+            this.setPreferredSize(new Dimension(1280, 720));
+            this.setLayout(null);
+        }
+
+        @Override
+        public void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (mapData[0][0] != null) {
+                for (int r = 0; r < 16; r++) {
+                    for (int c = 0; c < 16; c++) {
+                        int x = c * 80;
+                        int y = r * 45;
+
+                        if (mapData[r][c].equals("g")) {
+                            g.drawImage(groundImg, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("a")) {
+                            g.drawImage(airImg, x, y, 80, 45, null);
+                        }
+                    }
+                }
+            }
+        }
     }
     public static void main(String[] args) {
         new mainMenu();
