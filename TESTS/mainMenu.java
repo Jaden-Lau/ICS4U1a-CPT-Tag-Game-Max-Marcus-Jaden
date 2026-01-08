@@ -64,8 +64,10 @@ public class mainMenu implements ActionListener{
     
     // Map Properties
     String[][] mapData = new String[16][16];
-    BufferedImage groundImg = null;
-    BufferedImage airImg = null;
+    BufferedImage bottomGroundImg = null;
+    BufferedImage topGroundImg = null;
+    BufferedImage bottomSkyImg = null;
+    BufferedImage topSkyImg = null;
 
     // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
@@ -477,8 +479,10 @@ public class mainMenu implements ActionListener{
 
         // Load the Tiles
         try {
-            groundImg = ImageIO.read(new File("Map Tiles/ground.png"));
-            airImg = ImageIO.read(new File("Map Tiles/air.png"));
+            topGroundImg = ImageIO.read(new File("Map Tiles/groundTop1.png"));
+            topSkyImg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
+            bottomGroundImg = ImageIO.read(new File("Map Tiles/groundBottom1.png"));
+            bottomSkyImg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
@@ -557,10 +561,14 @@ public class mainMenu implements ActionListener{
                         int x = c * 80;
                         int y = r * 45;
 
-                        if (mapData[r][c].equals("g")) {
-                            g.drawImage(groundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("a")) {
-                            g.drawImage(airImg, x, y, 80, 45, null);
+                        if (mapData[r][c].equals("bg")) {
+                            g.drawImage(bottomGroundImg, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("tg")) {
+                            g.drawImage(topGroundImg, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("ts")) {
+                            g.drawImage(topSkyImg, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("bs")) {
+                            g.drawImage(bottomSkyImg, x, y, 80, 45, null);
                         }
                     }
                 }
@@ -674,7 +682,8 @@ public class mainMenu implements ActionListener{
         int col = pixelX / 80;
         int row = pixelY / 45;
         if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
-        return mapData[row][col].equals("g");
+        return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
+        
     }
     
     private void checkCollisions() {
