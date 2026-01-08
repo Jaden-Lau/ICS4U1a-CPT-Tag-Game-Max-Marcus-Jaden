@@ -27,6 +27,11 @@ public class mainMenu implements ActionListener{
     boolean[] keys = new boolean[256];
     int vy = 0;
 
+    int bombTimer = 15; // 15 seconds
+    Timer bombCountdown;
+    int roundsPlayed = 0;
+    boolean gameActive = false;
+
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
     JButton startGame = new JButton("START");
@@ -105,6 +110,20 @@ public class mainMenu implements ActionListener{
                 } else {
                     players.put(user, new Player(newX, newY, Color.GRAY, user));
                 }
+            }
+
+            if (msg.startsWith("TAGGED:")) {
+                String target = msg.substring(7);
+                for (Player p : players.values()) p.isIt = false;
+                if (players.containsKey(target)) {
+                    players.get(target).isIt = true;
+                    bombTimer = 15; 
+                }
+            }
+
+            if (msg.startsWith("EXPLODE:")) {
+                String loser = msg.substring(8);
+                System.out.println(loser + " went BOOM!");
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -470,6 +489,20 @@ public class mainMenu implements ActionListener{
                     }
                 }
             }
+            if (players.size() > 0) {
+                int screenWidth = 1280;
+                int sectionWidth = screenWidth / players.size();
+                int i = 0;
+                g.setFont(new Font("Arial", Font.BOLD, 18));
+                for (Player p : players.values()) {
+                    int centerX = (i * sectionWidth) + (sectionWidth / 2);
+                    g.setColor(p.color);
+                    g.fillRect(centerX - 50, 10, 20, 20);
+                    g.setColor(Color.BLACK);
+                    g.drawString(p.name + ": " + p.score, centerX - 25, 27);
+                    i++;
+                }
+            }
             for (Player p : players.values()) {
                 p.draw(g);
             }
@@ -477,24 +510,29 @@ public class mainMenu implements ActionListener{
     }
 
     class Player {
-        int x, y;
-        int width = 40;
-        int height = 40;
+        int x, y, width = 40, height = 40;
         Color color;
         String name;
+        int score = 0;
+        boolean isIt = false;
 
         public Player(int x, int y, Color color, String name) {
-            this.x = x;
-            this.y = y;
-            this.color = color;
-            this.name = name;
+            this.x = x; this.y = y; this.color = color; this.name = name;
         }
 
         public void draw(Graphics g) {
+            // Draw Highlight if IT
+            if (isIt) {
+                g.setColor(new Color(255, 255, 0, 150));
+                g.fillOval(x - 10, y - 10, width + 20, height + 20);
+            }
+            
             g.setColor(color);
             g.fillRect(x, y, width, height);
+            
             g.setColor(Color.BLACK);
-            g.drawString(name, x, y - 5);
+            String displayName = name + (isIt ? " 💣" : "");
+            g.drawString(displayName, x, y - 5);
         }
     }
 
@@ -555,6 +593,39 @@ public class mainMenu implements ActionListener{
         if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
         return mapData[row][col].equals("g");
     }
+    
+    private void checkCollisions() {
+        if (localPlayer == null || !localPlayer.isIt) return;
+
+        for (Player other : players.values()) {
+            if (other == localPlayer) continue;
+
+            // Rectangle Collision
+            Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
+            Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
+
+            if (myRect.intersects(otherRect)) {
+                // Transfer Bomb
+                localPlayer.isIt = false;
+                ssm.sendText("TAGGED:" + other.name);
+                
+                // Knockback
+                applyKnockback(other);
+            }
+        }
+    }
+
+    private void applyKnockback(Player other) {
+        // Launch opposite directions
+        if (localPlayer.x < other.x) {
+            localPlayer.x -= 50;
+        } else {
+            localPlayer.x += 50;
+        }
+        ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+    }
+
+
     public static void main(String[] args) {
         new mainMenu();
     }
