@@ -119,6 +119,7 @@ public class mainMenu implements ActionListener{
                     waitingLabel.setText("CONNECTED! WAITING FOR HOST...");
                     waitingLabel.setVisible(true);
                     connectBtn.setVisible(false);
+                    backBtn.setVisible(false);
                 }
             }
         } else if (evt.getSource() == csChooser) {
