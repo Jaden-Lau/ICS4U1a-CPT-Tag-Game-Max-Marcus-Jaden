@@ -32,6 +32,17 @@ public class mainMenu implements ActionListener{
     int roundsPlayed = 0;
     boolean gameActive = false;
 
+    int startDelayTimer = 5;
+    boolean canMove = false; 
+    String pendingIT = "";
+
+    int[][] spawnPoints = {
+        {100, 100},   // Top Left
+        {1100, 100},  // Top Right
+        {100, 600},   // Bottom Left
+        {1100, 600}   // Bottom Right
+    };
+
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
     JButton startGame = new JButton("START");
@@ -101,34 +112,27 @@ public class mainMenu implements ActionListener{
             if (msg.startsWith("POS:")) {
                 String[] data = msg.substring(4).split(",");
                 String user = data[0];
-                int newX = Integer.parseInt(data[1]);
-                int newY = Integer.parseInt(data[2]);
-                boolean itStatus = data[3].equals("1");
-                int syncedTimer = Integer.parseInt(data[4]);
+                if (user.equals(myUsername)) return;
 
                 if (players.containsKey(user)) {
                     Player p = players.get(user);
-                    players.get(user).x = newX;
-                    players.get(user).y = newY;
-                    p.isIt = itStatus;
-                    this.bombTimer = syncedTimer;
-                } else {
-                    Player p = new Player(newX, newY, Color.GRAY, user);
-                    p.isIt = itStatus;
-                    players.put(user, p);
-                    this.bombTimer = syncedTimer;
+                    p.x = Integer.parseInt(data[1]);
+                    p.y = Integer.parseInt(data[2]);
+                    if (startDelayTimer <= 0) {
+                        p.isIt = data[3].equals("1");
+                    }
                 }
             }
 
             if (msg.startsWith("TAGGED:")) {
                 String target = msg.substring(7);
-
                 for (Player p : players.values()) p.isIt = false;
                 
                 if (players.containsKey(target)) {
                     players.get(target).isIt = true;
-                    bombTimer = 15; 
-                    System.out.println("New IT: " + target);
+                    startDelayTimer = 0; 
+                    canMove = true;
+                    bombTimer = 15;
                 }
             }
             
@@ -165,6 +169,27 @@ public class mainMenu implements ActionListener{
             
             if (msg.startsWith("TIME:")) {
                 bombTimer = Integer.parseInt(msg.substring(5));
+            }
+
+            if (msg.startsWith("GRACE:")) {
+                String[] data = msg.substring(6).split(",");
+                startDelayTimer = Integer.parseInt(data[0]);
+                pendingIT = data[1];
+                canMove = false;
+                
+                int index = 0;
+                for (Player p : players.values()) {
+                    if (index < spawnPoints.length) {
+                        p.x = spawnPoints[index][0];
+                        p.y = spawnPoints[index][1];
+                        index++;
+                    }
+                }
+            }
+
+            if (msg.startsWith("TIME:")) {
+                bombTimer = Integer.parseInt(msg.substring(5));
+                canMove = true; // Unfreeze when timer starts
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -282,9 +307,23 @@ public class mainMenu implements ActionListener{
                     bombCountdown = new Timer(1000, new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            if (gameActive && bombTimer > 0) {
+                            if (!gameActive) return;
+
+                            // PHASE 1: The Start Countdown
+                            if (startDelayTimer > 0) {
+                                startDelayTimer--;
+                                ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
+                                if (startDelayTimer == 0) {
+                                    ssm.sendText("TAGGED:" + pendingIT);
+                                }
+                            } 
+                            // PHASE 2: The Actual Bomb Countdown
+                            else if (bombTimer > 0) {
                                 bombTimer--;
-                            } else if (gameActive && bombTimer <= 0) {
+                                ssm.sendText("TIME:" + bombTimer);
+                            } 
+                            // PHASE 3: Explosion
+                            else {
                                 for (Player p : players.values()) {
                                     if (p.isIt) {
                                         ssm.sendText("EXPLODE:" + p.name);
@@ -292,6 +331,7 @@ public class mainMenu implements ActionListener{
                                     }
                                 }
                                 bombTimer = 15;
+                                startDelayTimer = 5;
                             }
                         }
                     });
@@ -582,6 +622,17 @@ public class mainMenu implements ActionListener{
             for (Player p : players.values()) {
                 p.draw(g);
             }
+            if (gameActive && startDelayTimer > 0) {
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 250, 1280, 150);
+                
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 40));
+                String text = "WHO IS IT? " + startDelayTimer + "...";
+                if (startDelayTimer <= 2) text = "IT IS: " + pendingIT + "!";
+                
+                g.drawString(text, 450, 340);
+            }
         }
     }
 
@@ -619,6 +670,7 @@ public class mainMenu implements ActionListener{
 
     private void handleMovement() {
         if (localPlayer == null || !gameActive) return;
+        if (localPlayer == null || !gameActive || !canMove) return;
 
         int speed = localPlayer.isIt ? 8 : 5;
         int nextX = localPlayer.x;
@@ -711,12 +763,13 @@ public class mainMenu implements ActionListener{
     public void pickRandomIt() {
         if (players.isEmpty()) return;
         Object[] names = players.keySet().toArray();
-        int randomIndex = (int)(Math.random() * names.length);
-        String randomPlayer = (String)names[randomIndex];
-
-        if (ssm != null) {
-            ssm.sendText("TAGGED:" + randomPlayer);
-        }
+        pendingIT = (String)names[(int)(Math.random() * names.length)];
+        
+        startDelayTimer = 5;
+        bombTimer = 15;
+        
+        // Tell everyone who is about to be IT
+        ssm.sendText("GRACE:5," + pendingIT);
     }
 
     public static void main(String[] args) {
