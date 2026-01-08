@@ -45,6 +45,12 @@ public class mainMenu implements ActionListener{
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
 
+    // Instructions
+    JLabel instructionsTitle = new JLabel("HOW TO PLAY");
+    JTextArea instructionsText = new JTextArea();
+    JScrollPane instructionsScroll;
+    JButton instructionsBackBtn = new JButton("BACK TO MENU");
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
