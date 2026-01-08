@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
@@ -17,6 +18,14 @@ public class mainMenu implements ActionListener{
 
     JPanel gamePanel = new GamePanel();
     SuperSocketMaster ssm = null;
+
+    HashMap<String, Player> players = new HashMap<>();
+    String myUsername;
+    Timer gameTimer;
+
+    Player localPlayer; 
+    boolean[] keys = new boolean[256];
+    int vy = 0;
 
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
@@ -63,8 +72,34 @@ public class mainMenu implements ActionListener{
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
+        if (evt.getSource() == gameTimer) {
+            handleMovement();
+            gamePanel.repaint();
+        }
         if (ssm != null && evt.getSource() == ssm) {
             String msg = ssm.readText();
+
+           if (msg.startsWith("JOINED:")) {
+                String[] data = msg.substring(7).split(",");
+                String user = data[0];
+                int colorIdx = Integer.parseInt(data[1]);
+                
+                players.put(user, new Player(100, 100, playerColors[colorIdx], user));
+            }
+
+            if (msg.startsWith("POS:")) {
+                String[] data = msg.substring(4).split(",");
+                String user = data[0];
+                int newX = Integer.parseInt(data[1]);
+                int newY = Integer.parseInt(data[2]);
+
+                if (players.containsKey(user)) {
+                    players.get(user).x = newX;
+                    players.get(user).y = newY;
+                } else {
+                    players.put(user, new Player(newX, newY, Color.GRAY, user));
+                }
+            }
 
             // SERVER SIDE
             if (csChooser.getSelectedItem().equals("Server")) {
@@ -80,37 +115,40 @@ public class mainMenu implements ActionListener{
                 if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
                     String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
                     loadMap(mapFile);
-                    
-                    // Use invokeLater to prevent the IllegalComponentStateException
+
                     SwingUtilities.invokeLater(new Runnable() {
                         public void run() {
-                            if (gamePanel != null) {
-                                frame.setContentPane(gamePanel);
-                                frame.revalidate();
-                                frame.repaint();
-                            }
+                            myUsername = username.getText();
+                            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+                            players.put(myUsername, localPlayer);
+                            ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
+
+                            frame.setContentPane(gamePanel);
+                            frame.requestFocusInWindow();
+                            frame.revalidate();
+                            frame.repaint();
                         }
                     });
                 }
             }
         }
 
-        if (evt.getSource() == map1Btn) {
-            loadMap("map1.csv");
-            if (ssm != null){
-                ssm.sendText("MAP:1");
+        if (evt.getSource() == map1Btn || evt.getSource() == map2Btn) {
+            String mapFile = (evt.getSource() == map1Btn) ? "map1.csv" : "map2.csv";
+            loadMap(mapFile);
+            
+            if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
+
+            myUsername = username.getText(); 
+            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+            players.put(myUsername, localPlayer);
+
+            if (ssm != null) {
+                ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
             }
+
             frame.setContentPane(gamePanel);
-            frame.revalidate();
-            frame.repaint();
-        } else if (evt.getSource() == map2Btn) {
-            loadMap("map2.csv");
-            if (ssm != null){
-                ssm.sendText("MAP:2");
-            }
-            frame.setContentPane(gamePanel);
-            frame.revalidate();
-            frame.repaint();
+            frame.requestFocusInWindow();
         }
 
         if (evt.getSource() == startGame) {
@@ -324,6 +362,17 @@ public class mainMenu implements ActionListener{
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
 
+        gameTimer = new Timer(1000/60, this);
+        gameTimer.start();
+
+        frame.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) { keys[e.getKeyCode()] = true; }
+            @Override
+            public void keyReleased(KeyEvent e) { keys[e.getKeyCode()] = false; }
+        });
+        frame.setFocusable(true);
+
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -374,7 +423,77 @@ public class mainMenu implements ActionListener{
                     }
                 }
             }
+            for (Player p : players.values()) {
+                p.draw(g);
+            }
         }
+    }
+
+    class Player {
+        int x, y;
+        int width = 40;
+        int height = 40;
+        Color color;
+        String name;
+
+        public Player(int x, int y, Color color, String name) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.name = name;
+        }
+
+        public void draw(Graphics g) {
+            g.setColor(color);
+            g.fillRect(x, y, width, height);
+            g.setColor(Color.BLACK);
+            g.drawString(name, x, y - 5);
+        }
+    }
+
+    private void handleMovement() {
+        if (localPlayer == null) return;
+
+        int speed = 5;
+        int nextX = localPlayer.x;
+        int nextY = localPlayer.y;
+
+        // Left/Right Movement
+        if (keys[KeyEvent.VK_A]) nextX -= speed;
+        if (keys[KeyEvent.VK_D]) nextX += speed;
+
+        // Horizontal Collision Check
+        if (!isSolid(nextX, localPlayer.y) && !isSolid(nextX + 39, localPlayer.y + 39)) {
+            localPlayer.x = nextX;
+        }
+
+        // Gravity & Jumping
+        vy += 1;
+        boolean onGround = isSolid(localPlayer.x, localPlayer.y + 41) || 
+                   isSolid(localPlayer.x + 39, localPlayer.y + 41);
+        if (keys[KeyEvent.VK_W] && onGround) {
+            vy = -15;
+        }
+
+        // Vertical Collision Check
+        int nextYWithGravity = localPlayer.y + vy;
+        if (!isSolid(localPlayer.x, nextYWithGravity) && !isSolid(localPlayer.x + 39, nextYWithGravity + 39)) {
+            localPlayer.y = nextYWithGravity;
+        } else {
+            vy = 0;
+        }
+
+        // Network Sync
+        if (ssm != null) {
+            ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+        }
+    }
+
+    public boolean isSolid(int pixelX, int pixelY) {
+        int col = pixelX / 80;
+        int row = pixelY / 45;
+        if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
+        return mapData[row][col].equals("g");
     }
     public static void main(String[] args) {
         new mainMenu();
