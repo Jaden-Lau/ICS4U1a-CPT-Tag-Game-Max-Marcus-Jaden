@@ -43,6 +43,11 @@ public class mainMenu implements ActionListener{
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
 
+    // Game Panel
+    JGraphics gamePanel;
+    Timer thetimer;
+    String strNetText;
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
@@ -72,8 +77,23 @@ public class mainMenu implements ActionListener{
             }else if (csChooser.getSelectedItem().toString() == "Server"){
                 ssm = new SuperSocketMaster(1234, this);
             }
+        }else if(evt.getSource() == thetimer){
+            gamePanel.repaint(); 
+        }else if(evt.getSource() == ssm){
+            strNetText = ssm.readText();
+            if(strNetText.equals("a")){
+                JGraphics.playerX -= 1;
+            }else if(strNetText.equals("d")){
+                JGraphics.playerX += 1;
+            }
         }
-
+    }
+  public void keyPressed(KeyEvent evt) {
+       if(evt.getKeyChar() == 'a'){
+            ssm.sendText("a");
+       }else if(evt.getKeyChar() == 'd'){
+            ssm.sendText("d");
+       }
         frame.revalidate();
         frame.repaint();
     }
@@ -161,9 +181,12 @@ public class mainMenu implements ActionListener{
         map2Btn.setBounds(700, 300, 300, 300);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
+
+        // Game Panel
+        gamePanel = new JGraphics();
+        gamePanel.setLayout(null);
+        gamePanel.setPreferredSize(new Dimension(1280, 720));
         
-
-
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
