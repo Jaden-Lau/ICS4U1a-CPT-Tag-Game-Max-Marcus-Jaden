@@ -80,8 +80,10 @@ public class mainMenu implements ActionListener{
     
     // Map Properties
     String[][] mapData = new String[16][16];
-    BufferedImage groundImg = null;
-    BufferedImage airImg = null;
+    BufferedImage imgTs = null;
+    BufferedImage imgBs = null;
+    BufferedImage imgTg = null;
+    BufferedImage imgBg = null;
 
     // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
@@ -110,13 +112,13 @@ public class mainMenu implements ActionListener{
                 ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
                 
                 if (startDelayTimer == 0) {
-                    ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM"); // Start the round, 'SYSTEM' means no knockback
+                    ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");
                 }
             } 
 
             else if (bombTimer > 0) {
                 bombTimer--;
-                ssm.sendText("TIME:" + bombTimer); // Sync time with clients
+                ssm.sendText("TIME:" + bombTimer);
             } 
            
             else {
@@ -180,19 +182,17 @@ public class mainMenu implements ActionListener{
             if (msg.startsWith("POS:")) {
                 String[] data = msg.substring(4).split(",");
                 String user = data[0];
-                // Update others, but don't update ourselves to prevent lag/jitter
                 if (!user.equals(myUsername) && players.containsKey(user)) {
                     Player p = players.get(user);
                     p.x = Integer.parseInt(data[1]);
                     p.y = Integer.parseInt(data[2]);
-                    // Don't update 'isIt' here, rely on TAGGED messages for safety
                 }
             }
 
             if (msg.startsWith("TAGGED:")) {
                 String[] data = msg.substring(7).split(",");
                 String newIt = data[0];
-                String oldIt = data[1]; // We need this to know who to knock back
+                String oldIt = data[1]; 
 
                 // Reset everyone's IT status first
                 for (Player p : players.values()) p.isIt = false;
@@ -200,17 +200,17 @@ public class mainMenu implements ActionListener{
                 if (players.containsKey(newIt)) {
                     Player p = players.get(newIt);
                     p.isIt = true;
-                    bombTimer = 15; // Visual reset
+                    bombTimer = 15; 
                     
-                    // KNOCKBACK LOGIC: If I am the one who got tagged, bounce me back
                     if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
                         // Check where the tagger is to bounce opposite
                          if (players.containsKey(oldIt)) {
                             Player tagger = players.get(oldIt);
-                            if (tagger.x < localPlayer.x) localPlayer.x += 150; // Tagger is left, go right
-                            else localPlayer.x -= 150; // Tagger is right, go left
+                            if (tagger.x < localPlayer.x) localPlayer.x += 150;
+                            else localPlayer.x -= 150;
                         }
                     }
+                    canMove = true;
                 }
             }
 
@@ -325,15 +325,19 @@ public class mainMenu implements ActionListener{
         }
 
         if (evt.getSource() == startGame) {
-            frame.setContentPane(connectPanel);
+            switchPanel(connectPanel);
+            return;
         } else if (evt.getSource() == instruction) {
-            frame.setContentPane(instructionsPanel);
+            switchPanel(instructionsPanel);
+            return;
         } else if (evt.getSource() == backBtn) {
-            frame.setContentPane(mainMenuPanel);
             if (ssm != null) ssm.disconnect();
             gameActive = false;
+            switchPanel(mainMenuPanel);
+            return;
         } else if (evt.getSource() == instructionsBackBtn) {
-            frame.setContentPane(mainMenuPanel);
+            switchPanel(mainMenuPanel);
+            return;
         } else if (evt.getSource() == exit) {
             frame.dispose();
         } else if (evt.getSource() == rightColorButton) {
@@ -530,8 +534,10 @@ public class mainMenu implements ActionListener{
 
         // Load the Tiles
         try {
-            groundImg = ImageIO.read(new File("Map Tiles/ground.png"));
-            airImg = ImageIO.read(new File("Map Tiles/air.png"));
+            imgTs = ImageIO.read(new File("Map Tiles/groundBottom1.png")); 
+            imgBs = ImageIO.read(new File("Map Tiles/groundTop1.png"));
+            imgTg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            imgBg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
@@ -568,7 +574,7 @@ public class mainMenu implements ActionListener{
         layeredPane.add(chatPanel, JLayeredPane.PALETTE_LAYER);
 
         //Current Panel [MainMenuPanel]
-        frame.setContentPane(mainMenuPanel);
+        switchPanel(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.pack();
@@ -610,8 +616,10 @@ public class mainMenu implements ActionListener{
                     for (int c = 0; c < 16; c++) {
                         int x = c * 80;
                         int y = r * 45;
-                        if (mapData[r][c].equals("g")) g.drawImage(groundImg, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("a")) g.drawImage(airImg, x, y, 80, 45, null);
+                        if (mapData[r][c].equals("g")) g.drawImage(imgTs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgBs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgTg, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgBg, x, y, 80, 45, null);
                     }
                 }
             }
@@ -856,6 +864,14 @@ public class mainMenu implements ActionListener{
         bombTimer = 15;
         ssm.sendText("GRACE:5," + pendingIT);
     }
+
+    private void switchPanel(JPanel panel) {
+        frame.setContentPane(panel);
+        frame.revalidate();
+        frame.repaint();
+        panel.requestFocusInWindow();
+    }
+
 
     public static void main(String[] args) {
         new mainMenu();
