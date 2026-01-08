@@ -81,17 +81,17 @@ public class mainMenu implements ActionListener{
         
         else if (evt.getSource() == connectBtn) {
             if (csChooser.getSelectedItem().equals("Server")) {
+                connectBtn.setEnabled(false);
                 waitingLabel.setVisible(true);
                 backBtn.setVisible(false);
-                connectBtn.setEnabled(false);
-
+                
                 csChooser.setEnabled(false);
                 IPAdressField.setEnabled(false);
 
+                ssm = new SuperSocketMaster(1234, this);
+
                 connectPanel.revalidate();
                 connectPanel.repaint();
-
-                ssm = new SuperSocketMaster(1234, this);
             } else {
                 ssm = new SuperSocketMaster(IPAdressField.getText(),1234, this);
             }
@@ -171,6 +171,7 @@ public class mainMenu implements ActionListener{
 
         connectBtn.setFont(newFont);
         connectBtn.setBounds(450, 400, 650, 80);
+        connectBtn.addActionListener(this);
         connectPanel.add(connectBtn);
 
         backBtn.setFont(newFont);
@@ -182,7 +183,7 @@ public class mainMenu implements ActionListener{
         waitingLabel.setOpaque(true);
         waitingLabel.setBackground(new Color(200, 200, 200));
         waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
-        waitingLabel.setBounds(450, 440, 650, 60);
+        waitingLabel.setBounds(450, 500, 650, 60);
         waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         waitingLabel.setVisible(false);
 
