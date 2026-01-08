@@ -71,7 +71,7 @@ public class mainMenu implements ActionListener{
     // Chat
     JLayeredPane layeredPane = new JLayeredPane();
     JPanel chatPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    JTextArea chatTextArea = new JTextArea("Messages will appear here");
+    JTextArea chatTextArea = new JTextArea("Press / to reopen chat");
     JScrollPane chatLabel = new JScrollPane(chatTextArea);
     JTextField chatTextField = new JTextField("Click here to type a message and press enter to send.");
 
@@ -229,7 +229,8 @@ public class mainMenu implements ActionListener{
             ssm.sendText("CHATUSER" + myUsername);
             ssm.sendText("CHATTEXT" + strLine);
             chatTextField.setText("");
-            System.out.println("chat field action");
+            chatTextField.setFocusable(false);
+            chatPanel.setVisible(false);
         }
         
         frame.revalidate();
@@ -532,6 +533,11 @@ public class mainMenu implements ActionListener{
         // Network Sync
         if (ssm != null) {
             ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+        }
+
+        if (keys[KeyEvent.VK_SLASH]){
+            chatTextField.setFocusable(true);
+            chatPanel.setVisible(true);
         }
     }
 
