@@ -68,6 +68,12 @@ public class mainMenu implements ActionListener{
     JScrollPane instructionsScroll;
     JButton instructionsBackBtn = new JButton("BACK TO MENU");
 
+    // Chat
+    JLayeredPane layeredPane = new JLayeredPane();
+    JPanel chatPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JTextArea chatTextArea = new JTextArea("Messages will appear here");
+    JScrollPane chatLabel = new JScrollPane(chatTextArea);
+    JTextField chatTextField = new JTextField("Click here to type a message and press enter to send.");
 
     // Methods
     @Override
@@ -123,7 +129,8 @@ public class mainMenu implements ActionListener{
                             players.put(myUsername, localPlayer);
                             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
 
-                            frame.setContentPane(gamePanel);
+                            frame.add(gamePanel, BorderLayout.CENTER);
+                            frame.add(chatPanel, BorderLayout.SOUTH);
                             frame.requestFocusInWindow();
                             frame.revalidate();
                             frame.repaint();
@@ -147,7 +154,10 @@ public class mainMenu implements ActionListener{
                 ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
             }
 
-            frame.setContentPane(gamePanel);
+            frame.setContentPane(layeredPane);
+            frame.revalidate();
+            frame.repaint();
+
             frame.requestFocusInWindow();
         }
 
@@ -373,6 +383,34 @@ public class mainMenu implements ActionListener{
         });
         frame.setFocusable(true);
 
+        //Chat
+        gamePanel.setBounds(0, 0, 1280, 720);
+        chatPanel.setPreferredSize(new Dimension(200,200));
+        chatTextArea.setEditable(false);
+        chatTextArea.setLineWrap(true);
+        chatPanel.add(chatTextArea);
+        chatPanel.add(chatTextField);
+        layeredPane.setPreferredSize(new Dimension(1280, 720));
+        layeredPane.setLayout(null);
+
+        layeredPane.add(gamePanel, JLayeredPane.DEFAULT_LAYER);
+
+        chatPanel.setLayout(new BorderLayout());
+        chatPanel.setBounds(20, 500, 350, 180); // bottom-left overlay
+        chatPanel.setBackground(new Color(0, 0, 0, 150)); // semi-transparent
+
+        chatTextArea.setEditable(false);
+        chatTextArea.setLineWrap(true);
+
+        chatPanel.add(new JScrollPane(chatTextArea), BorderLayout.CENTER);
+        chatPanel.add(chatTextField, BorderLayout.SOUTH);
+
+        layeredPane.add(chatPanel, JLayeredPane.PALETTE_LAYER);
+
+
+
+
+
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -401,11 +439,12 @@ public class mainMenu implements ActionListener{
     }
 
     private class GamePanel extends JPanel {
+
         public GamePanel() {
             this.setPreferredSize(new Dimension(1280, 720));
             this.setLayout(null);
         }
-
+        
         @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
