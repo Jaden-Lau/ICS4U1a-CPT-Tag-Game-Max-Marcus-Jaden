@@ -20,7 +20,6 @@ public class mainMenu implements ActionListener{
     JButton instruction = new JButton("INSTRUCTIONS");
     JButton exit = new JButton("EXIT");
 
-
     //ConnectPanel
     JTextField username = new JTextField("Enter Username");
     JLabel SPCtextPanel1 = new JLabel("Select Player Color");
@@ -36,6 +35,9 @@ public class mainMenu implements ActionListener{
     Color[] playerColors = {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW};
     int currentColorIndex = 0;
     JPanel colorPreview = new JPanel();
+
+    JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
+
     
     //Map Select Panel
     JButton map1Btn = new JButton("map1");
@@ -43,24 +45,40 @@ public class mainMenu implements ActionListener{
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
 
-    // Game Panel
-    JGraphics gamePanel;
-    Timer thetimer;
-    String strNetText;
-
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
+        if (ssm != null && evt.getSource() == ssm) {
+            String msg = ssm.readText();
+
+            // SERVER SIDE
+            if (csChooser.getSelectedItem().equals("Server")) {
+                if (msg.equals("JOIN")) {
+                    System.out.println("Client joined! Moving to Map Select.");
+                    frame.setContentPane(mapSelectPanel);
+                    frame.revalidate();
+                    frame.repaint();
+                }
+            } 
+            // CLIENT SIDE
+            else {
+                if (msg.startsWith("MAP:")) {
+                    String chosenMap = msg.substring(4);
+                    System.out.println("Server chose: " + chosenMap);
+                }
+            }
+        }
+
         if (evt.getSource() == startGame) {
             frame.setContentPane(connectPanel);
         } else if (evt.getSource() == instruction) {
             frame.setContentPane(instructionsPanel);
         } else if (evt.getSource() == backBtn) {
             frame.setContentPane(mainMenuPanel);
+        } else if (evt.getSource() == instructionsBackBtn) {
+            frame.setContentPane(mainMenuPanel);
         } else if (evt.getSource() == exit) {
             frame.dispose();
-        } else if (evt.getSource() == map1Btn){
-
         } else if (evt.getSource() == rightColorButton) {
             currentColorIndex++;
             if (currentColorIndex >= playerColors.length)
@@ -71,33 +89,18 @@ public class mainMenu implements ActionListener{
             if (currentColorIndex < 0)
                 currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
-        }else if (evt.getSource() == connectBtn){
-            if (csChooser.getSelectedItem().toString() == "Client"){
-                ssm = new SuperSocketMaster(IPAdressField.getText(),1234, this);
-            }else if (csChooser.getSelectedItem().toString() == "Server"){
+        }
+        
+        else if (evt.getSource() == connectBtn) {
+            if (csChooser.getSelectedItem().equals("Server")) {
+                // Setup Server
                 ssm = new SuperSocketMaster(1234, this);
             }
-        }else if(evt.getSource() == thetimer){
-            gamePanel.repaint(); 
-        }else if(evt.getSource() == ssm){
-            strNetText = ssm.readText();
-            if(strNetText.equals("a")){
-                JGraphics.playerX -= 1;
-            }else if(strNetText.equals("d")){
-                JGraphics.playerX += 1;
-            }
         }
-    }
-  public void keyPressed(KeyEvent evt) {
-       if(evt.getKeyChar() == 'a'){
-            ssm.sendText("a");
-       }else if(evt.getKeyChar() == 'd'){
-            ssm.sendText("d");
-       }
+
         frame.revalidate();
         frame.repaint();
     }
-
 
     public mainMenu(){
       // Main Menu
@@ -154,12 +157,14 @@ public class mainMenu implements ActionListener{
 
         csChooser.setBounds(450, 200, 650, 60);
         connectPanel.add(csChooser);
+        csChooser.addActionListener(this);
 
         IPAdressField.setBounds(450, 300, 400, 50);
         connectPanel.add(IPAdressField);
 
         connectBtn.setFont(newFont);
         connectBtn.setBounds(450, 400, 650, 80);
+        connectBtn.addActionListener(this);
         connectPanel.add(connectBtn);
 
         backBtn.setFont(newFont);
@@ -167,9 +172,67 @@ public class mainMenu implements ActionListener{
         backBtn.addActionListener(this);
         connectPanel.add(backBtn);
 
-        //Instructions Panel
+        waitingLabel.setForeground(Color.BLACK);
+        waitingLabel.setOpaque(true);
+        waitingLabel.setBackground(new Color(200, 200, 200));
+        waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
+        waitingLabel.setBounds(450, 500, 650, 60);
+        waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        waitingLabel.setVisible(false);
+
+        connectPanel.add(waitingLabel);
+
+
+        // Instructions Panel
         instructionsPanel.setLayout(null);
         instructionsPanel.setPreferredSize(new Dimension(1280, 720));
+        instructionsPanel.setBackground(new Color(220, 220, 220));
+
+        instructionsTitle.setFont(new Font("Arial", Font.BOLD, 72));
+        instructionsTitle.setBounds(350, 30, 600, 90);
+        instructionsPanel.add(instructionsTitle);
+
+        instructionsText.setEditable(false);
+        instructionsText.setLineWrap(true);
+        instructionsText.setWrapStyleWord(true);
+        instructionsText.setFont(new Font("Arial", Font.PLAIN, 22));
+
+        instructionsText.setText(
+            "GAMEPLAY:\n\n" +
+            "This is a real-time multiplayer TAG game. One player is 'IT'. " +
+            "If you are IT, your goal is to tag another player. If you are not IT, " +
+            "your goal is to avoid being tagged.\n\n" +
+
+            "CONTROLS:\n\n" +
+            "W - Jump\n" +
+            "A - Move Left\n" +
+            "D - Move Right\n\n" +
+
+            "CONNECTION MODES:\n\n" +
+            "SERVER:\n" +
+            "Select Server mode if you are hosting the game. The server starts the game " +
+            "and waits for other players to connect.\n\n" +
+
+            "CLIENT:\n" +
+            "Select Client mode if you are joining a game. Enter the IP address of the " +
+            "server and press CONNECT.\n\n" +
+
+            "NETWORKING (SSM):\n\n" +
+            "This game uses SuperSocketMaster (SSM) to send messages between players. " +
+            "SSM is responsible for transmitting player movement, tag events, and chat " +
+            "messages in real time. Each message follows a specific format so the game " +
+            "can distinguish between gameplay data and chat data."
+        );
+
+        instructionsScroll = new JScrollPane(instructionsText);
+        instructionsScroll.setBounds(200, 150, 880, 430);
+        instructionsPanel.add(instructionsScroll);
+
+        instructionsBackBtn.setFont(newFont);
+        instructionsBackBtn.setBounds(390, 600, 500, 70);
+        instructionsBackBtn.addActionListener(this);
+        instructionsPanel.add(instructionsBackBtn);
+
 
         //Map Select Panel
         mapSelectPanel.setLayout(null);
@@ -181,12 +244,9 @@ public class mainMenu implements ActionListener{
         map2Btn.setBounds(700, 300, 300, 300);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
-
-        // Game Panel
-        gamePanel = new JGraphics();
-        gamePanel.setLayout(null);
-        gamePanel.setPreferredSize(new Dimension(1280, 720));
         
+
+
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
