@@ -51,6 +51,7 @@ public class mainMenu implements ActionListener{
     JScrollPane instructionsScroll;
     JButton instructionsBackBtn = new JButton("BACK TO MENU");
 
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
@@ -101,8 +102,41 @@ public class mainMenu implements ActionListener{
             if (csChooser.getSelectedItem().equals("Server")) {
                 // Setup Server
                 ssm = new SuperSocketMaster(1234, this);
+                if (ssm.connect()) {
+                    waitingLabel.setVisible(true);
+                    connectBtn.setVisible(false);
+                    backBtn.setVisible(false);
+                    csChooser.setEnabled(false);
+                }
+            } else {
+                // Setup Client
+                String ip = IPAdressField.getText();
+                ssm = new SuperSocketMaster(ip, 1234, this);
+                if (ssm.connect()) {
+                    // Client sends "JOIN" so Server knows to switch screens
+                    ssm.sendText("JOIN"); 
+                    
+                    waitingLabel.setText("CONNECTED! WAITING FOR HOST...");
+                    waitingLabel.setVisible(true);
+                    connectBtn.setVisible(false);
+                    backBtn.setVisible(false);
+                }
             }
-        }
+        } else if (evt.getSource() == csChooser) {
+            if (csChooser.getSelectedItem().equals("Server")) {
+                IPAdressField.setEnabled(false);
+                IPAdressField.setText("Server mode - no IP needed");
+            } else {
+                IPAdressField.setEnabled(true);
+                IPAdressField.setText("");
+            }
+        } else if (evt.getSource() == map1Btn) {
+            if (ssm != null) ssm.sendText("MAP:1");
+            System.out.println("Starting Map 1...");
+        } else if (evt.getSource() == map2Btn) {
+            if (ssm != null) ssm.sendText("MAP:2");
+            System.out.println("Starting Map 2...");
+        }   
 
         frame.revalidate();
         frame.repaint();
@@ -250,8 +284,6 @@ public class mainMenu implements ActionListener{
         map2Btn.setBounds(700, 300, 300, 300);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
-        
-
 
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
