@@ -76,7 +76,7 @@ public class mainMenu implements ActionListener{
     // Chat
     JLayeredPane layeredPane = new JLayeredPane();
     JPanel chatPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    JTextArea chatTextArea = new JTextArea("Press / to reopen chat");
+    JTextArea chatTextArea = new JTextArea("Press shift to close chat and enter to reopen it.");
     JScrollPane chatLabel = new JScrollPane(chatTextArea);
     JTextField chatTextField = new JTextField("Click here to type a message and press enter to send.");
 
@@ -128,7 +128,7 @@ public class mainMenu implements ActionListener{
 
             if (msg.startsWith("CHATUSER")){
                 String msgUser = msg.substring(8);
-                chatTextArea.append("\n" + msgUser + ": ");
+                chatTextArea.append("\n" + msgUser);
             }
 
             if (msg.startsWith("CHATTEXT")){
@@ -248,8 +248,8 @@ public class mainMenu implements ActionListener{
             ssm.sendText("CHATUSER" + myUsername);
             ssm.sendText("CHATTEXT" + strLine);
             chatTextField.setText("");
+            chatTextArea.append( "\n" + myUsername + ":" + strLine);   
             chatTextField.setFocusable(false);
-            chatPanel.setVisible(false);
         }
         
         frame.revalidate();
@@ -573,9 +573,17 @@ public class mainMenu implements ActionListener{
             ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
         }
 
-        if (keys[KeyEvent.VK_SLASH]){
-            chatTextField.setFocusable(true);
-            chatPanel.setVisible(true);
+        if (keys[KeyEvent.VK_SHIFT]){
+            if(chatPanel.isVisible()){
+                chatTextField.setFocusable(false);
+                chatPanel.setVisible(false);
+            }
+        }
+        if (keys[KeyEvent.VK_ENTER]){
+            if(! chatPanel.isVisible()){
+                chatTextField.setFocusable(true);
+                chatPanel.setVisible(true);
+            }
         }
     }
 
