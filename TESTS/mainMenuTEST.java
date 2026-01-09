@@ -8,7 +8,7 @@ import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class mainMenuTEST implements ActionListener{
+public class mainMenu implements ActionListener{
     // Properties
     JFrame frame = new JFrame("TAG Game");
     JPanel mainMenuPanel = new JPanel();
@@ -26,11 +26,6 @@ public class mainMenuTEST implements ActionListener{
     Player localPlayer; 
     boolean[] keys = new boolean[256];
     int vy = 0;
-
-    int bombTimer = 15;
-    Timer bombCountdown;
-    int roundsPlayed = 0;
-    boolean gameActive = false;
 
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
@@ -64,10 +59,8 @@ public class mainMenuTEST implements ActionListener{
     
     // Map Properties
     String[][] mapData = new String[16][16];
-    BufferedImage bottomGroundImg = null;
-    BufferedImage topGroundImg = null;
-    BufferedImage bottomSkyImg = null;
-    BufferedImage topSkyImg = null;
+    BufferedImage groundImg = null;
+    BufferedImage airImg = null;
 
     // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
@@ -105,68 +98,13 @@ public class mainMenuTEST implements ActionListener{
                 String user = data[0];
                 int newX = Integer.parseInt(data[1]);
                 int newY = Integer.parseInt(data[2]);
-                boolean itStatus = data[3].equals("1");
-                int syncedTimer = Integer.parseInt(data[4]);
 
                 if (players.containsKey(user)) {
-                    Player p = players.get(user);
                     players.get(user).x = newX;
                     players.get(user).y = newY;
-                    p.isIt = itStatus;
-                    this.bombTimer = syncedTimer;
                 } else {
-                    Player p = new Player(newX, newY, Color.GRAY, user);
-                    p.isIt = itStatus;
-                    players.put(user, p);
-                    this.bombTimer = syncedTimer;
+                    players.put(user, new Player(newX, newY, Color.GRAY, user));
                 }
-            }
-
-            if (msg.startsWith("TAGGED:")) {
-                String target = msg.substring(7);
-
-                for (Player p : players.values()) p.isIt = false;
-                
-                if (players.containsKey(target)) {
-                    players.get(target).isIt = true;
-                    bombTimer = 15; 
-                    System.out.println("New IT: " + target);
-                }
-            }
-            
-            if (gameActive && bombTimer > 0) {
-                bombTimer--;
-                ssm.sendText("TIME:" + bombTimer); 
-            } else if (gameActive && bombTimer <= 0) {
-                if (msg.startsWith("EXPLODE:")) {
-                    String loser = msg.substring(8);
-                    System.out.println(loser + " went BOOM!");
-
-                    for (Player p : players.values()) {
-                        if (!p.name.equals(loser)) {
-                            p.score++;
-                        }
-                    }
-
-                    roundsPlayed++;
-                    if (roundsPlayed >= 5) {
-                        gameActive = false;
-                        System.out.println("GAME OVER");
-                    } else {
-                        if (localPlayer != null) {
-                            localPlayer.x = 100;
-                            localPlayer.y = 100;
-                            localPlayer.isIt = false;
-                        }
-                        if (csChooser.getSelectedItem().equals("Server")) {
-                            pickRandomIt();
-                        }
-                    }
-                }
-            }
-            
-            if (msg.startsWith("TIME:")) {
-                bombTimer = Integer.parseInt(msg.substring(5));
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -193,7 +131,6 @@ public class mainMenuTEST implements ActionListener{
                 if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
                     String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
                     loadMap(mapFile);
-                    gameActive = true;
 
                     SwingUtilities.invokeLater(new Runnable() {
                         public void run() {
@@ -206,10 +143,6 @@ public class mainMenuTEST implements ActionListener{
                             frame.requestFocusInWindow();
                             frame.revalidate();
                             frame.repaint();
-
-                            Timer focusTimer = new Timer(100, e -> frame.requestFocusInWindow());
-                            focusTimer.setRepeats(false);
-                            focusTimer.start();
                         }
                     });
                 }
@@ -229,24 +162,12 @@ public class mainMenuTEST implements ActionListener{
             if (ssm != null) {
                 ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
             }
- 
-            if (csChooser.getSelectedItem().equals("Server")) {
-                pickRandomIt(); 
-            }
 
-            gameActive = true;
             frame.setContentPane(layeredPane);
             frame.revalidate();
             frame.repaint();
-            frame.requestFocusInWindow();
 
-            Timer startDelay = new Timer(1000, e -> {
-                if (csChooser.getSelectedItem().equals("Server")) {
-                    pickRandomIt();
-                }
-            });
-            startDelay.setRepeats(false);
-            startDelay.start();
+            frame.requestFocusInWindow();
         }
 
         if (evt.getSource() == startGame) {
@@ -280,24 +201,6 @@ public class mainMenuTEST implements ActionListener{
                     connectBtn.setVisible(false);
                     backBtn.setVisible(false);
                     csChooser.setEnabled(false);
-
-                    bombCountdown = new Timer(1000, new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            if (gameActive && bombTimer > 0) {
-                                bombTimer--;
-                            } else if (gameActive && bombTimer <= 0) {
-                                for (Player p : players.values()) {
-                                    if (p.isIt) {
-                                        ssm.sendText("EXPLODE:" + p.name);
-                                        break;
-                                    }
-                                }
-                                bombTimer = 15;
-                            }
-                        }
-                    });
-                    bombCountdown.start();
                 }
             } else {
                 // Setup Client
@@ -334,7 +237,7 @@ public class mainMenuTEST implements ActionListener{
         frame.repaint();
     }
 
-    public mainMenuTEST(){
+    public mainMenu(){
       // Main Menu
         mainMenuPanel.setLayout(null);
         mainMenuPanel.setPreferredSize(new Dimension(1280, 720));
@@ -479,10 +382,8 @@ public class mainMenuTEST implements ActionListener{
 
         // Load the Tiles
         try {
-            topGroundImg = ImageIO.read(new File("Map Tiles/groundTop1.png"));
-            topSkyImg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
-            bottomGroundImg = ImageIO.read(new File("Map Tiles/groundBottom1.png"));
-            bottomSkyImg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            groundImg = ImageIO.read(new File("Map Tiles/ground.png"));
+            airImg = ImageIO.read(new File("Map Tiles/air.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
@@ -561,30 +462,12 @@ public class mainMenuTEST implements ActionListener{
                         int x = c * 80;
                         int y = r * 45;
 
-                        if (mapData[r][c].equals("bg")) {
-                            g.drawImage(bottomGroundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("tg")) {
-                            g.drawImage(topGroundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("ts")) {
-                            g.drawImage(topSkyImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("bs")) {
-                            g.drawImage(bottomSkyImg, x, y, 80, 45, null);
+                        if (mapData[r][c].equals("g")) {
+                            g.drawImage(groundImg, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("a")) {
+                            g.drawImage(airImg, x, y, 80, 45, null);
                         }
                     }
-                }
-            }
-            if (players.size() > 0) {
-                int screenWidth = 1280;
-                int sectionWidth = screenWidth / players.size();
-                int i = 0;
-                g.setFont(new Font("Arial", Font.BOLD, 18));
-                for (Player p : players.values()) {
-                    int centerX = (i * sectionWidth) + (sectionWidth / 2);
-                    g.setColor(p.color);
-                    g.fillRect(centerX - 50, 10, 20, 20);
-                    g.setColor(Color.BLACK);
-                    g.drawString(p.name + ": " + p.score, centerX - 25, 27);
-                    i++;
                 }
             }
             for (Player p : players.values()) {
@@ -594,41 +477,31 @@ public class mainMenuTEST implements ActionListener{
     }
 
     class Player {
-        int x, y, width = 40, height = 40;
+        int x, y;
+        int width = 40;
+        int height = 40;
         Color color;
         String name;
-        int score = 0;
-        boolean isIt = false;
 
         public Player(int x, int y, Color color, String name) {
-            this.x = x; this.y = y; this.color = color; this.name = name;
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.name = name;
         }
 
         public void draw(Graphics g) {
-            // Draw Highlight if IT
-            if (isIt) {
-                g.setColor(new Color(255, 50, 50, 100)); 
-                g.fillOval(x - 10, y - 10, width + 30, height + 30);
-
-                g.setFont(new Font("Arial", Font.BOLD, 25));
-                g.setColor(Color.RED);
-                g.drawString(String.valueOf(bombTimer), x + (width/4), y - 25);
-            }
-            
-            g.setFont(new Font("Arial", Font.BOLD, 12));
             g.setColor(color);
             g.fillRect(x, y, width, height);
-            
             g.setColor(Color.BLACK);
-            String displayName = name + (isIt ? " 💣" : "");
-            g.drawString(displayName, x, y - 5);
+            g.drawString(name, x, y - 5);
         }
     }
 
     private void handleMovement() {
-        if (localPlayer == null || !gameActive) return;
+        if (localPlayer == null) return;
 
-        int speed = localPlayer.isIt ? 8 : 5;
+        int speed = 5;
         int nextX = localPlayer.x;
         int nextY = localPlayer.y;
 
@@ -657,12 +530,10 @@ public class mainMenuTEST implements ActionListener{
             vy = 0;
         }
 
-        checkCollisions();
-
         // Network Sync
         if (ssm != null) {
-            int itStatus = localPlayer.isIt ? 1 : 0;
-            ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y + "," + itStatus + "," + bombTimer);        }
+            ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+        }
 
         if (keys[KeyEvent.VK_SHIFT]){
             if(chatPanel.isVisible()){
@@ -682,53 +553,9 @@ public class mainMenuTEST implements ActionListener{
         int col = pixelX / 80;
         int row = pixelY / 45;
         if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
-        return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
-        
+        return mapData[row][col].equals("g");
     }
-    
-    private void checkCollisions() {
-        if (localPlayer == null || !localPlayer.isIt) return;
-
-        for (Player other : players.values()) {
-            if (other == localPlayer) continue;
-
-            // Rectangle Collision
-            Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
-            Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
-
-            if (myRect.intersects(otherRect)) {
-                // Transfer Bomb
-                localPlayer.isIt = false;
-                ssm.sendText("TAGGED:" + other.name);
-                
-                // Knockback
-                applyKnockback(other);
-            }
-        }
-    }
-
-    private void applyKnockback(Player other) {
-        // Launch opposite directions
-        if (localPlayer.x < other.x) {
-            localPlayer.x -= 150;
-        } else {
-            localPlayer.x += 150;
-        }
-        ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
-    }
-
-    public void pickRandomIt() {
-        if (players.isEmpty()) return;
-        Object[] names = players.keySet().toArray();
-        int randomIndex = (int)(Math.random() * names.length);
-        String randomPlayer = (String)names[randomIndex];
-
-        if (ssm != null) {
-            ssm.sendText("TAGGED:" + randomPlayer);
-        }
-    }
-
     public static void main(String[] args) {
-        new mainMenuTEST();
+        new mainMenu();
     }
 }
