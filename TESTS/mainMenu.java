@@ -730,8 +730,7 @@ public class mainMenu implements ActionListener{
                 g.setColor(Color.WHITE);
                 g.drawString("PAUSED", 610, 250);
             } else {
-                g.setColor(Color.WHITE);
-                g.fillRect(0, 0, getWidth(), getHeight());
+                
                 g.setColor(Color.BLACK);
                 g.drawString("GAME RUNNING", 20, 20);
             }

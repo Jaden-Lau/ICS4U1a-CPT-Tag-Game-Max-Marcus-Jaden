@@ -52,13 +52,12 @@ public class esc extends JPanel implements KeyListener,ActionListener{
         super.paintComponent(g);
 
         if (blnEsc) {
-            g.setColor(Color.BLACK);
+            g.setColor(new Color(0, 0, 0, 128));
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColor(Color.WHITE);
             g.drawString("PAUSED", 610, 250);
         } else {
-            g.setColor(Color.WHITE);
-            g.fillRect(0, 0, getWidth(), getHeight());
+            
             g.setColor(Color.BLACK);
             g.drawString("GAME RUNNING", 20, 20);
         }
