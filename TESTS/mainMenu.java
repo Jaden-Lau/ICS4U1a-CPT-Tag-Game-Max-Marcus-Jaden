@@ -616,10 +616,10 @@ public class mainMenu implements ActionListener{
                     for (int c = 0; c < 16; c++) {
                         int x = c * 80;
                         int y = r * 45;
-                        if (mapData[r][c].equals("g")) g.drawImage(imgTs, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("a")) g.drawImage(imgBs, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("a")) g.drawImage(imgTg, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("a")) g.drawImage(imgBg, x, y, 80, 45, null);
+                        if (mapData[r][c].equals("ts")) g.drawImage(imgTs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("bs")) g.drawImage(imgBs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("tg")) g.drawImage(imgTg, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("bg")) g.drawImage(imgBg, x, y, 80, 45, null);
                     }
                 }
             }
