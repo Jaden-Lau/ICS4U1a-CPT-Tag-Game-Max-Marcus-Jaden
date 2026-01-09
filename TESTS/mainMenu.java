@@ -122,6 +122,7 @@ public class mainMenu implements ActionListener{
             } 
            
             else {
+                canMove = true;
                 // 1. Find who is IT and Eliminate them
                 String deadPlayer = "";
                 for (Player p : players.values()) {
