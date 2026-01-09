@@ -194,6 +194,7 @@ public class realmainmenu extends JFrame {
             textArea.setText(
                 "DEVELOPED BY\n" +
                 "Jaden, Marcus, Max / BOOM TAG\n\n" +
+                "This project was created as the final culminating assignment \nfor St. Augustine's ICS4U1 Computer Science Course. \nWe hope you enjoy it!\n\n\n" + 
                 "SPECIAL THANKS FROM DEVELOPERS OF BOOM TAG\n"
             );
             
