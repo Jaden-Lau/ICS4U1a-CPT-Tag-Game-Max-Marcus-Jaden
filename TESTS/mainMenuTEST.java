@@ -8,7 +8,7 @@ import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class mainMenu implements ActionListener{
+public class mainMenuTEST implements ActionListener{
     // Properties
     JFrame frame = new JFrame("TAG Game");
     JPanel mainMenuPanel = new JPanel();
@@ -237,7 +237,7 @@ public class mainMenu implements ActionListener{
         frame.repaint();
     }
 
-    public mainMenu(){
+    public mainMenuTEST(){
       // Main Menu
         mainMenuPanel.setLayout(null);
         mainMenuPanel.setPreferredSize(new Dimension(1280, 720));
@@ -556,6 +556,6 @@ public class mainMenu implements ActionListener{
         return mapData[row][col].equals("g");
     }
     public static void main(String[] args) {
-        new mainMenu();
+        new mainMenuTEST();
     }
 }
