@@ -228,7 +228,7 @@ public class mainMenu implements ActionListener{
                     bombTimer = 15; 
 
                     startDelayTimer = 0;
-                    canMove = false;
+                    canMove = true;
 
                     if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
                         if (players.containsKey(oldIt)) {
@@ -281,6 +281,8 @@ public class mainMenu implements ActionListener{
                 if (players.containsKey(loser)) {
                     players.get(loser).isAlive = false;
                     players.get(loser).isIt = false;
+                    players.get(loser).x = -9000; 
+                    players.get(loser).y = -9000;
                     System.out.println(loser + " exploded!");
                 }
             }
