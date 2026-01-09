@@ -27,6 +27,11 @@ public class mainMenu implements ActionListener{
     boolean[] keys = new boolean[256];
     int vy = 0;
 
+    int bombTimer = -1; // 15 seconds
+    Timer bombCountdown = new Timer(1000, this);
+    int roundsPlayed = 0;
+    boolean gameActive = false;
+
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
     JButton startGame = new JButton("START");
@@ -59,10 +64,12 @@ public class mainMenu implements ActionListener{
     
     // Map Properties
     String[][] mapData = new String[16][16];
-    BufferedImage groundImg = null;
-    BufferedImage airImg = null;
+    BufferedImage groundBtm = null;
+    BufferedImage groundTop = null;
+    BufferedImage skyBtm = null;
+    BufferedImage skyTop = null;
 
-    // Instructions
+      // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
     JTextArea instructionsText = new JTextArea();
     JScrollPane instructionsScroll;
@@ -78,13 +85,22 @@ public class mainMenu implements ActionListener{
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
+        // Game update, refreshes for 60fps
+        //
         if (evt.getSource() == gameTimer) {
             handleMovement();
             gamePanel.repaint();
+        }else if(evt.getSource() == bombCountdown){
+            bombTimer--;
         }
+
+        // These are all network and message related
+        //
         if (ssm != null && evt.getSource() == ssm) {
             String msg = ssm.readText();
 
+            // Assigns every player with their color and username
+            //
            if (msg.startsWith("JOINED:")) {
                 String[] data = msg.substring(7).split(",");
                 String user = data[0];
@@ -93,6 +109,8 @@ public class mainMenu implements ActionListener{
                 players.put(user, new Player(100, 100, playerColors[colorIdx], user));
             }
 
+            // Keeps updating player positions
+            //
             if (msg.startsWith("POS:")) {
                 String[] data = msg.substring(4).split(",");
                 String user = data[0];
@@ -107,9 +125,42 @@ public class mainMenu implements ActionListener{
                 }
             }
 
+            if (msg.startsWith("TAGGED:")) {
+                String target = msg.substring(7);
+                for (Player p : players.values()) p.isIt = false;
+                if (players.containsKey(target)) {
+                    players.get(target).isIt = true;
+                }
+                System.out.println(target + "was given bomb");
+            }
+            if(csChooser.getSelectedItem().equals("Server")) {
+                if (bombTimer > 0) {
+                    ssm.sendText("TIME:" + bombTimer); 
+                    System.out.println("Timer: " + bombTimer);
+                }else if (bombTimer == 0) {
+                    for (Player p : players.values()) {
+                    if (p.isIt) {
+                        ssm.sendText("EXPLODE:" + p.name);
+                        break;
+                    }
+                }
+            }
+            }
+            if (msg.startsWith("EXPLODE:")) {
+                String loser = msg.substring(8);
+                System.out.println(loser + " went BOOM!");
+                
+                //Adjust scoreobard
+                for (Player p : players.values()) {
+                    if (!p.name.equals(loser)) {
+                        p.score++;
+                    }
+                }
+            }
+
             if (msg.startsWith("CHATUSER")){
                 String msgUser = msg.substring(8);
-                chatTextArea.append("\n" + msgUser);
+                chatTextArea.append("\n" + msgUser);            
             }
 
             if (msg.startsWith("CHATTEXT")){
@@ -126,7 +177,7 @@ public class mainMenu implements ActionListener{
                     frame.repaint();
                 }
             } 
-            // CLIENT SIDE
+            // CLIENT SIDE - Loads map based on server message, sends text containing username and color
             else {
                 if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
                     String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
@@ -148,27 +199,31 @@ public class mainMenu implements ActionListener{
                 }
             }
         }
-
         if (evt.getSource() == map1Btn || evt.getSource() == map2Btn) {
-            String mapFile = (evt.getSource() == map1Btn) ? "map1.csv" : "map2.csv";
-            loadMap(mapFile);
-            
-            if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
+                    String mapFile = (evt.getSource() == map1Btn) ? "map1.csv" : "map2.csv";
+                    loadMap(mapFile);
+                    
+                    if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
 
-            myUsername = username.getText(); 
-            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
-            players.put(myUsername, localPlayer);
+                    myUsername = username.getText(); 
+                    localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+                    players.put(myUsername, localPlayer);
 
-            if (ssm != null) {
-                ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-            }
+                    if (ssm != null) {
+                        ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
+                    }
+                    
+                    gameActive = true;
+                    frame.setContentPane(layeredPane);
+                    frame.revalidate();
+                    frame.repaint();
 
-            frame.setContentPane(layeredPane);
-            frame.revalidate();
-            frame.repaint();
+                    frame.requestFocusInWindow();
+                    if (csChooser.getSelectedItem().equals("Server")) {
+                        pickRandomIt();
+                    }
+                }
 
-            frame.requestFocusInWindow();
-        }
 
         if (evt.getSource() == startGame) {
             frame.setContentPane(connectPanel);
@@ -382,8 +437,10 @@ public class mainMenu implements ActionListener{
 
         // Load the Tiles
         try {
-            groundImg = ImageIO.read(new File("Map Tiles/ground.png"));
-            airImg = ImageIO.read(new File("Map Tiles/air.png"));
+            groundBtm = ImageIO.read(new File("Map Tiles/groundBottom1.png"));
+            groundTop = ImageIO.read(new File("Map Tiles/groundTop1.png"));
+            skyBtm = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            skyTop = ImageIO.read(new File("Map Tiles/skyTop1.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
@@ -462,12 +519,30 @@ public class mainMenu implements ActionListener{
                         int x = c * 80;
                         int y = r * 45;
 
-                        if (mapData[r][c].equals("g")) {
-                            g.drawImage(groundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("a")) {
-                            g.drawImage(airImg, x, y, 80, 45, null);
+                        if (mapData[r][c].equals("bg")) {
+                            g.drawImage(groundBtm, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("tg")) {
+                            g.drawImage(groundTop, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("bs")) {
+                            g.drawImage(skyBtm, x, y, 80, 45, null);
+                        } else if (mapData[r][c].equals("ts")) {
+                            g.drawImage(skyTop, x, y, 80, 45, null);
                         }
                     }
+                }
+            }
+                if (players.size() > 0) {
+                int screenWidth = 1280;
+                int sectionWidth = screenWidth / players.size();
+                int i = 0;
+                g.setFont(new Font("Arial", Font.BOLD, 18));
+                for (Player p : players.values()) {
+                    int centerX = (i * sectionWidth) + (sectionWidth / 2);
+                    g.setColor(p.color);
+                    g.fillRect(centerX - 50, 10, 20, 20);
+                    g.setColor(Color.BLACK);
+                    g.drawString(p.name + ": " + p.score, centerX - 25, 27);
+                    i++;
                 }
             }
             for (Player p : players.values()) {
@@ -477,24 +552,33 @@ public class mainMenu implements ActionListener{
     }
 
     class Player {
-        int x, y;
-        int width = 40;
-        int height = 40;
+        int x, y, width = 40, height = 40;
         Color color;
         String name;
+        int score = 0;
+        boolean isIt = false;
 
         public Player(int x, int y, Color color, String name) {
-            this.x = x;
-            this.y = y;
-            this.color = color;
-            this.name = name;
+            this.x = x; this.y = y; this.color = color; this.name = name;
         }
 
         public void draw(Graphics g) {
+            // Draw Highlight if IT
+            if (isIt) {
+                g.setColor(new Color(255, 50, 50, 100)); 
+                g.fillOval(x - 10, y - 10, width + 30, height + 30);
+
+                g.setFont(new Font("Arial", Font.BOLD, 25));
+                g.setColor(Color.RED);
+
+            }
+            
             g.setColor(color);
             g.fillRect(x, y, width, height);
+            
             g.setColor(Color.BLACK);
-            g.drawString(name, x, y - 5);
+            String displayName = name + (isIt ? " 💣" : "");
+            g.drawString(displayName, x, y - 5);
         }
     }
 
@@ -553,7 +637,54 @@ public class mainMenu implements ActionListener{
         int col = pixelX / 80;
         int row = pixelY / 45;
         if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
-        return mapData[row][col].equals("g");
+        return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
+    }
+    
+    private void checkCollisions() {
+        if (localPlayer == null || !localPlayer.isIt) return;
+
+        for (Player other : players.values()) {
+            if (other == localPlayer) continue;
+
+            // Rectangle Collision
+            Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
+            Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
+
+            if (myRect.intersects(otherRect)) {
+                // Transfer Bomb
+                localPlayer.isIt = false;
+                ssm.sendText("TAGGED:" + other.name);
+                
+                // Knockback
+                applyKnockback(other);
+            }
+        }
+    }
+
+    private void applyKnockback(Player other) {
+        // Launch opposite directions
+        if (localPlayer.x < other.x) {
+            localPlayer.x -= 50;
+        } else {
+            localPlayer.x += 50;
+        }
+        ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+    }
+
+    // Picks random player to be IT
+    //
+    public void pickRandomIt() {
+        if (players.isEmpty()) return;
+        Object[] names = players.keySet().toArray();
+        int randomIndex = (int)(Math.random() * names.length);
+        String randomPlayer = (String)names[randomIndex];
+
+        if (ssm != null) {
+            ssm.sendText("TAGGED:" + randomPlayer);
+        }
+        players.get(randomPlayer).isIt = true;
+        bombTimer = 15; 
+        bombCountdown.start();    //THIS STARTS BOMB TIMER
     }
     public static void main(String[] args) {
         new mainMenu();
