@@ -36,7 +36,7 @@ public class esc extends JPanel implements KeyListener,ActionListener{
 
         
     }
-
+//
     public void hideButtons(){
         resumeButton.setVisible(false);
         exitButton.setVisible(false);
@@ -46,7 +46,7 @@ public class esc extends JPanel implements KeyListener,ActionListener{
         resumeButton.setVisible(true);
         exitButton.setVisible(true);
     }
-
+//
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
