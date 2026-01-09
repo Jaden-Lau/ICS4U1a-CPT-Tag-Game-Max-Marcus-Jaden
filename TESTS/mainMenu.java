@@ -199,18 +199,18 @@ public class mainMenu implements ActionListener{
                 
                 if (players.containsKey(newIt)) {
                     Player p = players.get(newIt);
-                    p.isIt = true;
-                    bombTimer = 15; 
-                    
-                    if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
-                        // Check where the tagger is to bounce opposite
-                         if (players.containsKey(oldIt)) {
-                            Player tagger = players.get(oldIt);
-                            if (tagger.x < localPlayer.x) localPlayer.x += 150;
-                            else localPlayer.x -= 150;
-                        }
+                p.isIt = true;
+                bombTimer = 15; 
+                startDelayTimer = 0;
+
+                if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
+                    if (players.containsKey(oldIt)) {
+                        Player tagger = players.get(oldIt);
+                        if (tagger.x < localPlayer.x) localPlayer.x += 150;
+                        else localPlayer.x -= 150;
                     }
-                    canMove = true;
+                }
+                canMove = true;
                 }
             }
 
