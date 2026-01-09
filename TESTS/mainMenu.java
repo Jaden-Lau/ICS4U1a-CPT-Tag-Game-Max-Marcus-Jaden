@@ -27,7 +27,7 @@ public class mainMenu implements ActionListener{
     boolean[] keys = new boolean[256];
     int vy = 0;
 
-    int bombTimer = -1; // 15 seconds
+    int bombTimer; // 15 seconds
     Timer bombCountdown = new Timer(1000, this);
     int roundsPlayed = 0;
     boolean gameActive = false;
@@ -137,15 +137,21 @@ public class mainMenu implements ActionListener{
                 if (bombTimer > 0) {
                     ssm.sendText("TIME:" + bombTimer); 
                     System.out.println("Timer: " + bombTimer);
-                }else if (bombTimer == 0) {
+                }else if (bombTimer <= 0) {
                     for (Player p : players.values()) {
-                    if (p.isIt) {
-                        ssm.sendText("EXPLODE:" + p.name);
-                        break;
+                        if (p.isIt) {
+                            ssm.sendText("EXPLODE:" + p.name);
+                            //Adjust scoreobard
+                            for (Player v : players.values()) {
+                                if(!p.name.equals(v))
+                                p.score++;
+                            }
+                        }
+                            break;
                     }
                 }
             }
-            }
+
             if (msg.startsWith("EXPLODE:")) {
                 String loser = msg.substring(8);
                 System.out.println(loser + " went BOOM!");
@@ -570,6 +576,9 @@ public class mainMenu implements ActionListener{
 
                 g.setFont(new Font("Arial", Font.BOLD, 25));
                 g.setColor(Color.RED);
+
+                g.setColor(Color.BLACK);
+                g.drawString(Integer.toString(bombTimer), x, y - 10);
 
             }
             
