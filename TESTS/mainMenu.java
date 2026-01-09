@@ -534,10 +534,10 @@ public class mainMenu implements ActionListener{
 
         // Load the Tiles
         try {
-            imgTs = ImageIO.read(new File("Map Tiles/groundBottom1.png")); 
-            imgBs = ImageIO.read(new File("Map Tiles/groundTop1.png"));
-            imgTg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
-            imgBg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
+            imgBg = ImageIO.read(new File("Map Tiles/groundBottom1.png")); 
+            imgTg = ImageIO.read(new File("Map Tiles/groundTop1.png"));
+            imgBs = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            imgTs = ImageIO.read(new File("Map Tiles/skyTop1.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
