@@ -27,7 +27,7 @@ public class realmainmenu extends JFrame {
         setVisible(true);
     }
 
-    // --- MAIN MENU PANEL ---
+    // Main Menu Page
     class MenuPanel extends JPanel {
         public MenuPanel() {
             setBackground(Color.BLACK);
