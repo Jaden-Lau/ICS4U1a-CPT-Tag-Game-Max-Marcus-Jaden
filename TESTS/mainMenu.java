@@ -118,7 +118,18 @@ public class mainMenu implements ActionListener{
                 if (startDelayTimer > 0) {
                     ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
                 } else {
-                    ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");
+                    // Enable movement locally for the host
+                    startDelayTimer = 0;
+                    canMove = true;
+
+                    // Set IT locally
+                    for (Player p : players.values()) p.isIt = false;
+                    if (players.containsKey(pendingIT)) {
+                        players.get(pendingIT).isIt = true;
+                    }
+
+                    // Send to clients
+                    ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");        
                 }
             }
 
