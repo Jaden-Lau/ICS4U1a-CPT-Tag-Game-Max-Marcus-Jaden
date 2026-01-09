@@ -114,7 +114,7 @@ public class mainMenu implements ActionListener{
                 } else {
                     ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");
                 }
-            } 
+            }
 
             else if (bombTimer > 0) {
                 bombTimer--;
@@ -199,18 +199,19 @@ public class mainMenu implements ActionListener{
                 
                 if (players.containsKey(newIt)) {
                     Player p = players.get(newIt);
-                p.isIt = true;
-                bombTimer = 15; 
-                startDelayTimer = 0;
+                    p.isIt = true;
+                    bombTimer = 15; 
 
-                if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
-                    if (players.containsKey(oldIt)) {
-                        Player tagger = players.get(oldIt);
-                        if (tagger.x < localPlayer.x) localPlayer.x += 150;
-                        else localPlayer.x -= 150;
+                    startDelayTimer = 0;
+                    canMove = true;
+
+                    if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
+                        if (players.containsKey(oldIt)) {
+                            Player tagger = players.get(oldIt);
+                            if (tagger.x < localPlayer.x) localPlayer.x += 150;
+                            else localPlayer.x -= 150;
+                        }
                     }
-                }
-                canMove = true;
                 }
             }
 
@@ -222,11 +223,34 @@ public class mainMenu implements ActionListener{
                 String[] data = msg.substring(6).split(",");
                 startDelayTimer = Integer.parseInt(data[0]);
                 pendingIT = data[1];
-                canMove = false; // Freeze players during countdown
+                canMove = false; 
                 
-                // If it's the start of a countdown (5), Revive everyone
+                // New Spawn
                 if (startDelayTimer == 5) {
+                    // Revive everyone
                     for(Player p : players.values()) p.isAlive = true;
+
+                    // Sort players Alphabetically so everyone agrees on who goes where
+                    java.util.List<String> sortedNames = new java.util.ArrayList<>(players.keySet());
+                    java.util.Collections.sort(sortedNames);
+
+                    // Assign Coordinates based on sorted order
+                    for (int i = 0; i < sortedNames.size(); i++) {
+                        String pName = sortedNames.get(i);
+                        Player p = players.get(pName);
+                        
+                        // Assign spawn point (loop back to 0 if more than 4 players)
+                        int spawnIndex = i % spawnPoints.length;
+                        p.x = spawnPoints[spawnIndex][0];
+                        p.y = spawnPoints[spawnIndex][1];
+
+                        if (pName.equals(myUsername)) {
+                            localPlayer.x = p.x;
+                            localPlayer.y = p.y;
+                            int itStatus = localPlayer.isIt ? 1 : 0;
+                            ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y + "," + itStatus + "," + bombTimer);
+                        }
+                    }
                 }
             }
 
