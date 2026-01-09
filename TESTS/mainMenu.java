@@ -32,6 +32,22 @@ public class mainMenu implements ActionListener{
     int roundsPlayed = 0;
     boolean gameActive = false;
 
+    int startDelayTimer = 5;
+    boolean canMove = false; 
+    String pendingIT = "";
+
+    int maxRounds = 5;
+    boolean isRoundOver = false;
+    String winnerName = "";
+    Timer serverLogicTimer;
+
+    int[][] spawnPoints = {
+        {100, 100},   // Top Left
+        {1100, 100},  // Top Right
+        {100, 600},   // Bottom Left
+        {1100, 600}   // Bottom Right
+    };
+
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
     JButton startGame = new JButton("START");
@@ -64,10 +80,10 @@ public class mainMenu implements ActionListener{
     
     // Map Properties
     String[][] mapData = new String[16][16];
-    BufferedImage bottomGroundImg = null;
-    BufferedImage topGroundImg = null;
-    BufferedImage bottomSkyImg = null;
-    BufferedImage topSkyImg = null;
+    BufferedImage imgTs = null;
+    BufferedImage imgBs = null;
+    BufferedImage imgTg = null;
+    BufferedImage imgBg = null;
 
     // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
@@ -87,131 +103,197 @@ public class mainMenu implements ActionListener{
     public void actionPerformed(ActionEvent evt) {
         if (evt.getSource() == gameTimer) {
             handleMovement();
-            gamePanel.repaint();
+            gamePanel.repaint(); 
         }
+
+        if (evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server") && gameActive) {
+            if (startDelayTimer > 0) {
+                startDelayTimer--;
+                ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
+                
+                if (startDelayTimer == 0) {
+                    ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");
+                }
+            } 
+
+            else if (bombTimer > 0) {
+                bombTimer--;
+                ssm.sendText("TIME:" + bombTimer);
+            } 
+           
+            else {
+                // 1. Find who is IT and Eliminate them
+                String deadPlayer = "";
+                for (Player p : players.values()) {
+                    if (p.isIt) {
+                        deadPlayer = p.name;
+                        p.isAlive = false;
+                        p.isIt = false;
+                        break;
+                    }
+                }
+                
+                if (!deadPlayer.equals("")) {
+                    ssm.sendText("EXPLODE:" + deadPlayer);
+                }
+
+                // 2. Check for Survivors
+                int aliveCount = 0;
+                String lastSurvivor = "";
+                for (Player p : players.values()) {
+                    if (p.isAlive) {
+                        aliveCount++;
+                        lastSurvivor = p.name;
+                    }
+                }
+
+                // 3. Round Logic
+                if (aliveCount <= 1) {
+                    // ROUND OVER
+                    ssm.sendText("ROUND_WIN:" + lastSurvivor);
+                    
+                    if (roundsPlayed + 1 >= 5) { // Best of 5
+                         ssm.sendText("GAME_OVER");
+                         gameActive = false;
+                         bombCountdown.stop();
+                    } else {
+                         // Prepare next round
+                         pickRandomIt(); 
+                    }
+                } else {
+                    // ROUND CONTINUES - Pick new IT from survivors
+                    pickNewItFromSurvivors();
+                }
+            }
+        }
+
         if (ssm != null && evt.getSource() == ssm) {
             String msg = ssm.readText();
 
-           if (msg.startsWith("JOINED:")) {
+            if (msg.startsWith("JOINED:")) {
                 String[] data = msg.substring(7).split(",");
                 String user = data[0];
                 int colorIdx = Integer.parseInt(data[1]);
-                
-                players.put(user, new Player(100, 100, playerColors[colorIdx], user));
+                if (!players.containsKey(user)) {
+                    players.put(user, new Player(100, 100, playerColors[colorIdx], user));
+                }
             }
 
             if (msg.startsWith("POS:")) {
                 String[] data = msg.substring(4).split(",");
                 String user = data[0];
-                int newX = Integer.parseInt(data[1]);
-                int newY = Integer.parseInt(data[2]);
-                boolean itStatus = data[3].equals("1");
-                int syncedTimer = Integer.parseInt(data[4]);
-
-                if (players.containsKey(user)) {
+                if (!user.equals(myUsername) && players.containsKey(user)) {
                     Player p = players.get(user);
-                    players.get(user).x = newX;
-                    players.get(user).y = newY;
-                    p.isIt = itStatus;
-                    this.bombTimer = syncedTimer;
-                } else {
-                    Player p = new Player(newX, newY, Color.GRAY, user);
-                    p.isIt = itStatus;
-                    players.put(user, p);
-                    this.bombTimer = syncedTimer;
+                    p.x = Integer.parseInt(data[1]);
+                    p.y = Integer.parseInt(data[2]);
                 }
             }
 
             if (msg.startsWith("TAGGED:")) {
-                String target = msg.substring(7);
+                String[] data = msg.substring(7).split(",");
+                String newIt = data[0];
+                String oldIt = data[1]; 
 
+                // Reset everyone's IT status first
                 for (Player p : players.values()) p.isIt = false;
                 
-                if (players.containsKey(target)) {
-                    players.get(target).isIt = true;
+                if (players.containsKey(newIt)) {
+                    Player p = players.get(newIt);
+                    p.isIt = true;
                     bombTimer = 15; 
-                    System.out.println("New IT: " + target);
-                }
-            }
-            
-            if (gameActive && bombTimer > 0) {
-                bombTimer--;
-                ssm.sendText("TIME:" + bombTimer); 
-            } else if (gameActive && bombTimer <= 0) {
-                if (msg.startsWith("EXPLODE:")) {
-                    String loser = msg.substring(8);
-                    System.out.println(loser + " went BOOM!");
-
-                    for (Player p : players.values()) {
-                        if (!p.name.equals(loser)) {
-                            p.score++;
+                    
+                    if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
+                        // Check where the tagger is to bounce opposite
+                         if (players.containsKey(oldIt)) {
+                            Player tagger = players.get(oldIt);
+                            if (tagger.x < localPlayer.x) localPlayer.x += 150;
+                            else localPlayer.x -= 150;
                         }
                     }
-
-                    roundsPlayed++;
-                    if (roundsPlayed >= 5) {
-                        gameActive = false;
-                        System.out.println("GAME OVER");
-                    } else {
-                        if (localPlayer != null) {
-                            localPlayer.x = 100;
-                            localPlayer.y = 100;
-                            localPlayer.isIt = false;
-                        }
-                        if (csChooser.getSelectedItem().equals("Server")) {
-                            pickRandomIt();
-                        }
-                    }
+                    canMove = true;
                 }
             }
-            
+
             if (msg.startsWith("TIME:")) {
                 bombTimer = Integer.parseInt(msg.substring(5));
             }
 
-            if (msg.startsWith("CHATUSER")){
-                String msgUser = msg.substring(8);
-                chatTextArea.append("\n" + msgUser);
+            if (msg.startsWith("GRACE:")) {
+                String[] data = msg.substring(6).split(",");
+                startDelayTimer = Integer.parseInt(data[0]);
+                pendingIT = data[1];
+                canMove = false; // Freeze players during countdown
+                
+                // If it's the start of a countdown (5), Revive everyone
+                if (startDelayTimer == 5) {
+                    for(Player p : players.values()) p.isAlive = true;
+                }
             }
 
-            if (msg.startsWith("CHATTEXT")){
-                String msgText = msg.substring(8);
-                chatTextArea.append(msgText);
+            if (msg.startsWith("EXPLODE:")) {
+                String loser = msg.substring(8);
+                if (players.containsKey(loser)) {
+                    players.get(loser).isAlive = false;
+                    players.get(loser).isIt = false;
+                    System.out.println(loser + " exploded!");
+                }
             }
 
-            // SERVER SIDE
+            if (msg.startsWith("ROUND_WIN:")) {
+                String winner = msg.substring(10);
+                if (players.containsKey(winner)) {
+                    players.get(winner).score++;
+                }
+                roundsPlayed++;
+                
+                // Reset positions for next round
+                int index = 0;
+                for (Player p : players.values()) {
+                    p.isIt = false;
+                    p.isAlive = true;
+                    if (index < spawnPoints.length) {
+                        p.x = spawnPoints[index][0];
+                        p.y = spawnPoints[index][1];
+                        index++;
+                    }
+                }
+                // If I am a client, reset my local player reference coordinates too
+                if (localPlayer != null) {
+                }
+            }
+            
+            if (msg.equals("GAME_OVER")) {
+                gameActive = false;
+                // Add a "Return to Menu" button here if you want
+                backBtn.setVisible(true);
+                backBtn.setText("MAIN MENU");
+                backBtn.setBounds(400, 500, 480, 60);
+                layeredPane.add(backBtn, JLayeredPane.MODAL_LAYER);
+            }
+
+            if (msg.startsWith("CHATUSER")) chatTextArea.append("\n" + msg.substring(8));
+            if (msg.startsWith("CHATTEXT")) chatTextArea.append(msg.substring(8));
+
             if (csChooser.getSelectedItem().equals("Server")) {
                 if (msg.equals("JOIN")) {
-                    System.out.println("Client joined! Moving to Map Select.");
                     frame.setContentPane(mapSelectPanel);
-                    frame.revalidate();
-                    frame.repaint();
+                    frame.revalidate(); frame.repaint();
                 }
-            } 
-            // CLIENT SIDE
-            else {
+            } else {
                 if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
                     String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
                     loadMap(mapFile);
-                    gameActive = true;
+                    
+                    // Setup Player
+                    myUsername = username.getText();
+                    localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+                    players.put(myUsername, localPlayer);
+                    ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
 
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            myUsername = username.getText();
-                            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
-                            players.put(myUsername, localPlayer);
-                            ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-
-                            frame.setContentPane(layeredPane);
-                            frame.requestFocusInWindow();
-                            frame.revalidate();
-                            frame.repaint();
-
-                            Timer focusTimer = new Timer(100, e -> frame.requestFocusInWindow());
-                            focusTimer.setRepeats(false);
-                            focusTimer.start();
-                        }
-                    });
+                    // Switch Screen
+                    frame.setContentPane(layeredPane);
+                    frame.requestFocusInWindow();
+                    frame.revalidate(); frame.repaint();
                 }
             }
         }
@@ -225,88 +307,63 @@ public class mainMenu implements ActionListener{
             myUsername = username.getText(); 
             localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
             players.put(myUsername, localPlayer);
-
-            if (ssm != null) {
-                ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-            }
- 
-            if (csChooser.getSelectedItem().equals("Server")) {
-                pickRandomIt(); 
-            }
+            if (ssm != null) ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
 
             gameActive = true;
             frame.setContentPane(layeredPane);
-            frame.revalidate();
-            frame.repaint();
+            frame.revalidate(); frame.repaint();
             frame.requestFocusInWindow();
 
-            Timer startDelay = new Timer(1000, e -> {
-                if (csChooser.getSelectedItem().equals("Server")) {
-                    pickRandomIt();
-                }
-            });
-            startDelay.setRepeats(false);
-            startDelay.start();
+            // Start the Server Logic Timer
+            if (csChooser.getSelectedItem().equals("Server")) {
+                pickRandomIt(); 
+                // Initialize the 1-second logic timer
+                if (bombCountdown != null) bombCountdown.stop();
+                bombCountdown = new Timer(1000, this); 
+                bombCountdown.start();
+            }
         }
 
         if (evt.getSource() == startGame) {
-            frame.setContentPane(connectPanel);
+            switchPanel(connectPanel);
+            return;
         } else if (evt.getSource() == instruction) {
-            frame.setContentPane(instructionsPanel);
+            switchPanel(instructionsPanel);
+            return;
         } else if (evt.getSource() == backBtn) {
-            frame.setContentPane(mainMenuPanel);
+            if (ssm != null) ssm.disconnect();
+            gameActive = false;
+            switchPanel(mainMenuPanel);
+            return;
         } else if (evt.getSource() == instructionsBackBtn) {
-            frame.setContentPane(mainMenuPanel);
+            switchPanel(mainMenuPanel);
+            return;
         } else if (evt.getSource() == exit) {
             frame.dispose();
         } else if (evt.getSource() == rightColorButton) {
             currentColorIndex++;
-            if (currentColorIndex >= playerColors.length)
-                currentColorIndex = 0;
+            if (currentColorIndex >= playerColors.length) currentColorIndex = 0;
             colorPreview.setBackground(playerColors[currentColorIndex]);
         } else if (evt.getSource() == leftColorButton) {
             currentColorIndex--;
-            if (currentColorIndex < 0)
-                currentColorIndex = playerColors.length - 1;
+            if (currentColorIndex < 0) currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
         }
         
         else if (evt.getSource() == connectBtn) {
             if (csChooser.getSelectedItem().equals("Server")) {
-                // Setup Server
                 ssm = new SuperSocketMaster(1234, this);
                 if (ssm.connect()) {
                     waitingLabel.setVisible(true);
                     connectBtn.setVisible(false);
                     backBtn.setVisible(false);
                     csChooser.setEnabled(false);
-
-                    bombCountdown = new Timer(1000, new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            if (gameActive && bombTimer > 0) {
-                                bombTimer--;
-                            } else if (gameActive && bombTimer <= 0) {
-                                for (Player p : players.values()) {
-                                    if (p.isIt) {
-                                        ssm.sendText("EXPLODE:" + p.name);
-                                        break;
-                                    }
-                                }
-                                bombTimer = 15;
-                            }
-                        }
-                    });
-                    bombCountdown.start();
                 }
             } else {
-                // Setup Client
                 String ip = IPAdressField.getText();
                 ssm = new SuperSocketMaster(ip, 1234, this);
                 if (ssm.connect()) {
-                    // Client sends "JOIN" so Server knows to switch screens
                     ssm.sendText("JOIN"); 
-                    
                     waitingLabel.setText("CONNECTED! WAITING FOR HOST...");
                     waitingLabel.setVisible(true);
                     connectBtn.setVisible(false);
@@ -324,14 +381,12 @@ public class mainMenu implements ActionListener{
         } else if (evt.getSource() == chatTextField){
             String strLine = chatTextField.getText();
             ssm.sendText("CHATUSER" + myUsername);
-            ssm.sendText("CHATTEXT" + strLine);
+            ssm.sendText("CHATTEXT" + ": " + strLine); // Added colon for formatting
             chatTextField.setText("");
-            chatTextArea.append( "\n" + myUsername + ":" + strLine);   
+            chatTextArea.append( "\n" + myUsername + ": " + strLine);   
             chatTextField.setFocusable(false);
+            chatPanel.setVisible(false); // Auto hide after sending
         }
-        
-        frame.revalidate();
-        frame.repaint();
     }
 
     public mainMenu(){
@@ -479,10 +534,10 @@ public class mainMenu implements ActionListener{
 
         // Load the Tiles
         try {
-            topGroundImg = ImageIO.read(new File("Map Tiles/groundTop1.png"));
-            topSkyImg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
-            bottomGroundImg = ImageIO.read(new File("Map Tiles/groundBottom1.png"));
-            bottomSkyImg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            imgTs = ImageIO.read(new File("Map Tiles/groundBottom1.png")); 
+            imgBs = ImageIO.read(new File("Map Tiles/groundTop1.png"));
+            imgTg = ImageIO.read(new File("Map Tiles/skyBottom1.png"));
+            imgBg = ImageIO.read(new File("Map Tiles/skyTop1.png"));
         } catch (IOException e) {
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
@@ -519,7 +574,7 @@ public class mainMenu implements ActionListener{
         layeredPane.add(chatPanel, JLayeredPane.PALETTE_LAYER);
 
         //Current Panel [MainMenuPanel]
-        frame.setContentPane(mainMenuPanel);
+        switchPanel(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.pack();
@@ -546,7 +601,6 @@ public class mainMenu implements ActionListener{
     }
 
     private class GamePanel extends JPanel {
-
         public GamePanel() {
             this.setPreferredSize(new Dimension(1280, 720));
             this.setLayout(null);
@@ -555,42 +609,94 @@ public class mainMenu implements ActionListener{
         @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
+
+            // Map
             if (mapData[0][0] != null) {
                 for (int r = 0; r < 16; r++) {
                     for (int c = 0; c < 16; c++) {
                         int x = c * 80;
                         int y = r * 45;
-
-                        if (mapData[r][c].equals("bg")) {
-                            g.drawImage(bottomGroundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("tg")) {
-                            g.drawImage(topGroundImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("ts")) {
-                            g.drawImage(topSkyImg, x, y, 80, 45, null);
-                        } else if (mapData[r][c].equals("bs")) {
-                            g.drawImage(bottomSkyImg, x, y, 80, 45, null);
-                        }
+                        if (mapData[r][c].equals("g")) g.drawImage(imgTs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgBs, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgTg, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("a")) g.drawImage(imgBg, x, y, 80, 45, null);
                     }
                 }
             }
+
+            // Player
+            for (Player p : players.values()) {
+                p.draw(g);
+            }
+
+            // -HUD
             if (players.size() > 0) {
                 int screenWidth = 1280;
                 int sectionWidth = screenWidth / players.size();
                 int i = 0;
-                g.setFont(new Font("Arial", Font.BOLD, 18));
+                
+                // Draw background bar for scores
+                g.setColor(new Color(255, 255, 255, 180));
+                g.fillRect(0, 0, 1280, 40);
+
+                g.setFont(new Font("Arial", Font.BOLD, 20));
                 for (Player p : players.values()) {
                     int centerX = (i * sectionWidth) + (sectionWidth / 2);
+                    
+                    // Draw color square
                     g.setColor(p.color);
-                    g.fillRect(centerX - 50, 10, 20, 20);
+                    g.fillRect(centerX - 60, 10, 20, 20);
+                    
+                    // Draw Name and Score
                     g.setColor(Color.BLACK);
-                    g.drawString(p.name + ": " + p.score, centerX - 25, 27);
+                    if (!p.isAlive) g.setColor(Color.GRAY); // Grey out dead players
+                    g.drawString(p.name + ": " + p.score, centerX - 35, 27);
                     i++;
                 }
+                
+                // Draw Round Counter
+                g.setColor(Color.BLACK);
+                g.setFont(new Font("Arial", Font.BOLD, 15));
+                g.drawString("ROUND: " + (roundsPlayed + 1) + " / " + maxRounds, 10, 60);
             }
-            for (Player p : players.values()) {
-                p.draw(g);
+
+            // Overlays
+            // Countdown Overlay
+            if (gameActive && startDelayTimer > 0) {
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 250, 1280, 150);
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 50));
+                
+                String text = "STARTING IN " + startDelayTimer;
+                if (startDelayTimer <= 2) text = "IT IS: " + pendingIT + "!";
+                
+                // Center text logic
+                FontMetrics metrics = g.getFontMetrics();
+                int x = (1280 - metrics.stringWidth(text)) / 2;
+                g.drawString(text, x, 340);
+            }
+
+            // Game Over Overlay
+            if (roundsPlayed >= maxRounds) {
+                g.setColor(new Color(0, 0, 0, 220));
+                g.fillRect(0, 0, 1280, 720);
+                g.setColor(Color.YELLOW);
+                g.setFont(new Font("Arial", Font.BOLD, 60));
+                String winText = "GAME OVER! WINNER: " + getWinnerName();
+                int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
+                g.drawString(winText, x, 360);
             }
         }
+    }
+
+    // Helper method to find the winner
+    public String getWinnerName() {
+        Player best = null;
+        for (Player p : players.values()) {
+            if (best == null || p.score > best.score) best = p;
+        }
+        return best != null ? best.name : "None";
     }
 
     class Player {
@@ -599,20 +705,25 @@ public class mainMenu implements ActionListener{
         String name;
         int score = 0;
         boolean isIt = false;
+        boolean isAlive = true;
 
         public Player(int x, int y, Color color, String name) {
             this.x = x; this.y = y; this.color = color; this.name = name;
         }
 
         public void draw(Graphics g) {
-            // Draw Highlight if IT
-            if (isIt) {
-                g.setColor(new Color(255, 50, 50, 100)); 
-                g.fillOval(x - 10, y - 10, width + 30, height + 30);
+            if (!isAlive) return;
 
+            // Draw Highlight if IT (Bomb Holder)
+            if (isIt) {
+                // Glowing Highlight
+                g.setColor(new Color(255, 50, 50, 100)); 
+                g.fillOval(x - 10, y - 10, width + 20, height + 20);
+
+                // Bomb Timer
                 g.setFont(new Font("Arial", Font.BOLD, 25));
                 g.setColor(Color.RED);
-                g.drawString(String.valueOf(bombTimer), x + (width/4), y - 25);
+                g.drawString(String.valueOf(bombTimer), x + 10, y - 20);
             }
             
             g.setFont(new Font("Arial", Font.BOLD, 12));
@@ -620,6 +731,7 @@ public class mainMenu implements ActionListener{
             g.fillRect(x, y, width, height);
             
             g.setColor(Color.BLACK);
+            // Bomb Emoji logic
             String displayName = name + (isIt ? " 💣" : "");
             g.drawString(displayName, x, y - 5);
         }
@@ -627,6 +739,7 @@ public class mainMenu implements ActionListener{
 
     private void handleMovement() {
         if (localPlayer == null || !gameActive) return;
+        if (localPlayer == null || !gameActive || !canMove) return;
 
         int speed = localPlayer.isIt ? 8 : 5;
         int nextX = localPlayer.x;
@@ -687,22 +800,32 @@ public class mainMenu implements ActionListener{
     }
     
     private void checkCollisions() {
-        if (localPlayer == null || !localPlayer.isIt) return;
+        if (localPlayer == null || !localPlayer.isIt || !gameActive || !localPlayer.isAlive) return;
 
         for (Player other : players.values()) {
-            if (other == localPlayer) continue;
+            if (other == localPlayer || !other.isAlive) continue;
 
-            // Rectangle Collision
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
             if (myRect.intersects(otherRect)) {
-                // Transfer Bomb
+                // 1. Transfer Bomb
                 localPlayer.isIt = false;
-                ssm.sendText("TAGGED:" + other.name);
                 
-                // Knockback
-                applyKnockback(other);
+                // 2. Knockback Logic (Push BOTH players away)
+                int pushForce = 150;
+                // If I am to the left of them, I go left (-), they go right (+)
+                if (localPlayer.x < other.x) {
+                    localPlayer.x -= pushForce; // I go left
+                } else {
+                    localPlayer.x += pushForce; // I go right
+                }
+                
+                // 3. Send Network Message
+                ssm.sendText("TAGGED:" + other.name + "," + localPlayer.name);
+                
+                // Reset local bomb timer instantly for visual feedback
+                bombTimer = 15; 
             }
         }
     }
@@ -717,16 +840,39 @@ public class mainMenu implements ActionListener{
         ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
     }
 
+    // Pick random IT only from people who are ALIVE
+    public void pickNewItFromSurvivors() {
+        java.util.List<String> survivors = new java.util.ArrayList<>();
+        for (Player p : players.values()) {
+            if (p.isAlive) survivors.add(p.name);
+        }
+        
+        if (survivors.size() > 0) {
+            String newIt = survivors.get((int)(Math.random() * survivors.size()));
+            bombTimer = 15;
+            // Just tell everyone who is IT, no countdown needed mid-round
+            ssm.sendText("TAGGED:" + newIt + ",SYSTEM"); 
+        }
+    }
+
+    // Adjusted PickRandomIt for start of rounds
     public void pickRandomIt() {
         if (players.isEmpty()) return;
         Object[] names = players.keySet().toArray();
-        int randomIndex = (int)(Math.random() * names.length);
-        String randomPlayer = (String)names[randomIndex];
-
-        if (ssm != null) {
-            ssm.sendText("TAGGED:" + randomPlayer);
-        }
+        pendingIT = (String)names[(int)(Math.random() * names.length)];
+        
+        startDelayTimer = 5;
+        bombTimer = 15;
+        ssm.sendText("GRACE:5," + pendingIT);
     }
+
+    private void switchPanel(JPanel panel) {
+        frame.setContentPane(panel);
+        frame.revalidate();
+        frame.repaint();
+        panel.requestFocusInWindow();
+    }
+
 
     public static void main(String[] args) {
         new mainMenu();
