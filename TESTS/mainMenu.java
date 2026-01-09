@@ -109,9 +109,9 @@ public class mainMenu implements ActionListener{
         if (evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server") && gameActive) {
             if (startDelayTimer > 0) {
                 startDelayTimer--;
-                ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
-                
-                if (startDelayTimer == 0) {
+                if (startDelayTimer > 0) {
+                    ssm.sendText("GRACE:" + startDelayTimer + "," + pendingIT);
+                } else {
                     ssm.sendText("TAGGED:" + pendingIT + ",SYSTEM");
                 }
             } 
