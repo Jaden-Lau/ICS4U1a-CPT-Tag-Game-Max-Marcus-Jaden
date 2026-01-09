@@ -89,10 +89,30 @@ public class mainMenu implements ActionListener{
         //
         if (evt.getSource() == gameTimer) {
             handleMovement();
+            checkCollisions();
             gamePanel.repaint();
-        }else if(evt.getSource() == bombCountdown){
-            bombTimer--;
-        }
+        }else if(evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server")){
+                bombTimer--;
+                ssm.sendText("TIME:" + bombTimer); 
+            if (bombTimer <= 0) {
+                for (Player p : players.values()) {
+                    if (p.isIt) {
+                        ssm.sendText("EXPLODE:" + p.name);
+                        p.isIt = false;
+                        //Adjust scoreobard
+                        for (Player v : players.values()) {
+                            if(!v.name.equals(p.name)){
+                                    v.score++;
+                                System.out.println("Server side added 1 to " + p);
+                            }
+                        }
+                        break;
+                    }
+                }
+                
+                pickRandomIt();  // THIS RESTARTS THE BOMB LOOP AGAIN, need to add the grace phase
+                }
+            }
 
         // These are all network and message related
         //
@@ -133,24 +153,6 @@ public class mainMenu implements ActionListener{
                 }
                 System.out.println(target + "was given bomb");
             }
-            if(csChooser.getSelectedItem().equals("Server")) {
-                if (bombTimer > 0) {
-                    ssm.sendText("TIME:" + bombTimer); 
-                    System.out.println("Timer: " + bombTimer);
-                }else if (bombTimer <= 0) {
-                    for (Player p : players.values()) {
-                        if (p.isIt) {
-                            ssm.sendText("EXPLODE:" + p.name);
-                            //Adjust scoreobard
-                            for (Player v : players.values()) {
-                                if(!p.name.equals(v))
-                                p.score++;
-                            }
-                        }
-                            break;
-                    }
-                }
-            }
 
             if (msg.startsWith("EXPLODE:")) {
                 String loser = msg.substring(8);
@@ -158,10 +160,16 @@ public class mainMenu implements ActionListener{
                 
                 //Adjust scoreobard
                 for (Player p : players.values()) {
+                    p.isIt = false;
                     if (!p.name.equals(loser)) {
                         p.score++;
+                        System.out.println("Client side - added 1 to " + p);
                     }
                 }
+            }
+
+            if (msg.startsWith("TIME:")) {
+                bombTimer = Integer.parseInt(msg.substring(5));
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -576,9 +584,10 @@ public class mainMenu implements ActionListener{
 
                 g.setFont(new Font("Arial", Font.BOLD, 25));
                 g.setColor(Color.RED);
-
-                g.setColor(Color.BLACK);
-                g.drawString(Integer.toString(bombTimer), x, y - 10);
+                if (bombTimer > 0){
+                    g.setColor(Color.BLACK);
+                    g.drawString(Integer.toString(bombTimer), x, y - 10);
+                }
 
             }
             
@@ -592,6 +601,7 @@ public class mainMenu implements ActionListener{
     }
 
     private void handleMovement() {
+        if (!gameActive) return;
         if (localPlayer == null) return;
 
         int speed = 5;
@@ -650,6 +660,7 @@ public class mainMenu implements ActionListener{
     }
     
     private void checkCollisions() {
+        if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
 
         for (Player other : players.values()) {
