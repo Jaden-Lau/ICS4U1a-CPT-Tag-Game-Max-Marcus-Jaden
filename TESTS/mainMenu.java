@@ -111,7 +111,9 @@ public class mainMenu implements ActionListener{
             handleMovement();
             gamePanel.repaint(); 
         }
-
+        if (ssm.readText().equals("CANMOVE")){
+            canMove = true;
+        }
         if (evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server") && gameActive) {
             if (startDelayTimer > 0) {
                 startDelayTimer--;
@@ -121,6 +123,7 @@ public class mainMenu implements ActionListener{
                     // Enable movement locally for the host
                     startDelayTimer = 0;
                     canMove = true;
+                    ssm.sendText("CANMOVE");
 
                     // Set IT locally
                     for (Player p : players.values()) p.isIt = false;
@@ -139,7 +142,6 @@ public class mainMenu implements ActionListener{
             } 
            
             else {
-                canMove = true;
                 // 1. Find who is IT and Eliminate them
                 String deadPlayer = "";
                 for (Player p : players.values()) {
