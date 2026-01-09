@@ -151,7 +151,7 @@ public class mainMenu implements ActionListener{
                 if (players.containsKey(target)) {
                     players.get(target).isIt = true;
                 }
-                System.out.println(target + "was given bomb");
+                System.out.println(target + " was given bomb");
             }
 
             if (msg.startsWith("EXPLODE:")) {
@@ -202,6 +202,7 @@ public class mainMenu implements ActionListener{
                             myUsername = username.getText();
                             localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
                             players.put(myUsername, localPlayer);
+                            gameActive = true;
                             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
 
                             frame.setContentPane(layeredPane);
@@ -586,7 +587,7 @@ public class mainMenu implements ActionListener{
                 g.setColor(Color.RED);
                 if (bombTimer > 0){
                     g.setColor(Color.BLACK);
-                    g.drawString(Integer.toString(bombTimer), x, y - 10);
+                    g.drawString(Integer.toString(bombTimer), x, y - 20);
                 }
 
             }
@@ -674,6 +675,10 @@ public class mainMenu implements ActionListener{
                 // Transfer Bomb
                 localPlayer.isIt = false;
                 ssm.sendText("TAGGED:" + other.name);
+                for (Player p : players.values()) p.isIt = false;
+                if (players.containsKey(other.name)) {
+                    players.get(other.name).isIt = true;
+                }
                 
                 // Knockback
                 applyKnockback(other);
