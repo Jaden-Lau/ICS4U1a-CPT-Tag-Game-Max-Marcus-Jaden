@@ -75,6 +75,7 @@ public class esc extends JPanel implements KeyListener,ActionListener{
             }else if(blnEsc == true){
                 blnEsc = false;
                 hideButtons();
+                repaint();
             }
         }
     }
