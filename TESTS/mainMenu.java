@@ -98,6 +98,12 @@ public class mainMenu implements ActionListener{
     JScrollPane chatLabel = new JScrollPane(chatTextArea);
     JTextField chatTextField = new JTextField("Click here to type a message and press enter to send.");
 
+    //ESC
+    boolean blnEsc = false;
+    JButton exitButton = new JButton("Exit");
+    JButton resumeButton = new JButton("Resume");
+    JButton instructions = new JButton("Instructions");
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
@@ -165,6 +171,13 @@ public class mainMenu implements ActionListener{
                     // ROUND CONTINUES - Pick new IT from survivors
                     pickNewItFromSurvivors();
                 }
+            }
+            if(evt.getSource() == resumeButton){
+                blnEsc = false;
+                hideButtons();
+                
+            }else if(evt.getSource() == exitButton){
+                System.exit(0);
             }
         }
 
@@ -712,6 +725,18 @@ public class mainMenu implements ActionListener{
                 int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
                 g.drawString(winText, x, 360);
             }
+
+            if (blnEsc) {
+                g.setColor(Color.BLACK);
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(Color.WHITE);
+                g.drawString("PAUSED", 610, 250);
+            } else {
+                g.setColor(Color.WHITE);
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(Color.BLACK);
+                g.drawString("GAME RUNNING", 20, 20);
+            }
         }
     }
 
@@ -814,6 +839,18 @@ public class mainMenu implements ActionListener{
                 chatPanel.setVisible(true);
             }
         }
+        if (keys[KeyEvent.VK_ESCAPE]) {
+            if(blnEsc == false){
+                //System.out.println("esc");
+                blnEsc = true;
+                showButtons();
+                
+            }else if(blnEsc == true){
+                blnEsc = false;
+                hideButtons();
+                
+            }
+        }
     }
 
     public boolean isSolid(int pixelX, int pixelY) {
@@ -896,6 +933,16 @@ public class mainMenu implements ActionListener{
         frame.revalidate();
         frame.repaint();
         panel.requestFocusInWindow();
+    }
+
+    public void hideButtons(){
+        resumeButton.setVisible(false);
+        exitButton.setVisible(false);
+    }
+
+    public void showButtons(){
+        resumeButton.setVisible(true);
+        exitButton.setVisible(true);
     }
 
 
