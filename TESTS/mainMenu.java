@@ -203,7 +203,7 @@ public class mainMenu implements ActionListener{
                     bombTimer = 15; 
 
                     startDelayTimer = 0;
-                    canMove = true;
+                    canMove = false;
 
                     if (myUsername.equals(newIt) && !oldIt.equals("SYSTEM")) {
                         if (players.containsKey(oldIt)) {
@@ -227,14 +227,11 @@ public class mainMenu implements ActionListener{
                 
                 // New Spawn
                 if (startDelayTimer == 5) {
-                    // Revive everyone
                     for(Player p : players.values()) p.isAlive = true;
 
-                    // Sort players Alphabetically so everyone agrees on who goes where
                     java.util.List<String> sortedNames = new java.util.ArrayList<>(players.keySet());
                     java.util.Collections.sort(sortedNames);
 
-                    // Assign Coordinates based on sorted order
                     for (int i = 0; i < sortedNames.size(); i++) {
                         String pName = sortedNames.get(i);
                         Player p = players.get(pName);
@@ -343,10 +340,11 @@ public class mainMenu implements ActionListener{
                 pickRandomIt(); 
                 // Initialize the 1-second logic timer
                 if (bombCountdown != null) bombCountdown.stop();
-                bombCountdown = new Timer(1000, this); 
-                bombCountdown.start();
+                    bombCountdown = new Timer(1000, this); 
+                    bombCountdown.start();
+                }
             }
-        }
+        
 
         if (evt.getSource() == startGame) {
             switchPanel(connectPanel);
@@ -405,11 +403,11 @@ public class mainMenu implements ActionListener{
         } else if (evt.getSource() == chatTextField){
             String strLine = chatTextField.getText();
             ssm.sendText("CHATUSER" + myUsername);
-            ssm.sendText("CHATTEXT" + ": " + strLine); // Added colon for formatting
+            ssm.sendText("CHATTEXT" + ": " + strLine); 
             chatTextField.setText("");
             chatTextArea.append( "\n" + myUsername + ": " + strLine);   
             chatTextField.setFocusable(false);
-            chatPanel.setVisible(false); // Auto hide after sending
+            chatPanel.setVisible(false);
         }
     }
 
@@ -585,8 +583,8 @@ public class mainMenu implements ActionListener{
         chatPanel.add(chatTextArea);
         chatPanel.add(chatTextField);
         chatPanel.setLayout(new BorderLayout());
-        chatPanel.setBounds(0, 600, 300, 120); // bottom-left overlay
-        chatPanel.setBackground(new Color(0, 0, 0, 200)); // semi-transparent
+        chatPanel.setBounds(0, 600, 300, 120); 
+        chatPanel.setBackground(new Color(0, 0, 0, 200)); 
         chatTextArea.setEditable(false);
         chatTextArea.setLineWrap(true);
         chatTextField.addActionListener(this);
@@ -653,7 +651,7 @@ public class mainMenu implements ActionListener{
                 p.draw(g);
             }
 
-            // -HUD
+            // HUD
             if (players.size() > 0) {
                 int screenWidth = 1280;
                 int sectionWidth = screenWidth / players.size();
