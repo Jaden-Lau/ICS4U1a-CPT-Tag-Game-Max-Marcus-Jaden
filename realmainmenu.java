@@ -53,6 +53,9 @@ public class realmainmenu extends JFrame {
         private JButton createMenuButton(String text) {
             JButton button = new JButton(text);
             button.setAlignmentX(Component.CENTER_ALIGNMENT);
+            button.setPreferredSize(new Dimension(360, 50));
+            button.setMinimumSize(button.getPreferredSize());
+            button.setMaximumSize(button.getPreferredSize());
             button.setFont(new Font("Serif", Font.PLAIN, 28));
             button.setForeground(new Color(200, 200, 200));
             button.setFocusPainted(false);
