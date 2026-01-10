@@ -62,7 +62,7 @@ public class mainMenu2 implements ActionListener{
     JButton backBtn = new JButton("BACK TO MENU");
     JButton connectBtn = new JButton("CONNECT");
     String[] strcs = {"Client", "Server"};
-    JComboBox csChooser = new JComboBox<>(strcs);
+    JComboBox<String> csChooser = new JComboBox<>(strcs);
     JTextField IPAdressField = new JTextField("Enter IP Adress");
     Font newFont = new Font("Arial", Font.BOLD, 24);
 
