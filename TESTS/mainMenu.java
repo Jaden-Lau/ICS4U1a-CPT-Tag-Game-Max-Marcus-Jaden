@@ -1,6 +1,9 @@
-package MainJavaPrograms;
-
-
+package TESTS;
+//
+//
+// THIS IS A TEST FILE
+//
+//
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -8,7 +11,6 @@ import java.io.*;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-
 
 public class mainMenu implements ActionListener{
     // Properties
@@ -18,33 +20,31 @@ public class mainMenu implements ActionListener{
     JPanel connectPanel = new JPanel();
     JPanel mapSelectPanel = new JPanel();
 
-
     JPanel gamePanel = new GamePanel();
     SuperSocketMaster ssm = null;
-
 
     HashMap<String, Player> players = new HashMap<>();
     String myUsername;
     Timer gameTimer;
 
-
-    Player localPlayer;
+    Player localPlayer; 
     boolean[] keys = new boolean[256];
     int vy = 0;
-
 
     int bombTimer; // 15 seconds
     Timer bombCountdown = new Timer(1000, this);
     int roundsPlayed = 0;
     boolean gameActive = false;
-
+    boolean gracePeriod = false;
+    int graceTimer;
+    Timer graceCountdown = new Timer(1000,this);
+    
 
     //Main Menu
     JLabel title = new JLabel("TAG GAME");
     JButton startGame = new JButton("START");
     JButton instruction = new JButton("INSTRUCTIONS");
     JButton exit = new JButton("EXIT");
-
 
     //ConnectPanel
     JTextField username = new JTextField("Enter Username");
@@ -58,20 +58,18 @@ public class mainMenu implements ActionListener{
     JTextField IPAdressField = new JTextField("Enter IP Adress");
     Font newFont = new Font("Arial", Font.BOLD, 24);
 
-
     Color[] playerColors = {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW};
     int currentColorIndex = 0;
     JPanel colorPreview = new JPanel();
 
-
     JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
-   
+    
     //Map Select Panel
     JButton map1Btn = new JButton("map1");
     JLabel map1NameLabel = new JLabel("Map1");
     JButton map2Btn = new JButton("map2");
     JLabel map2NameLabel = new JLabel("Map2");
-   
+    
     // Map Properties
     String[][] mapData = new String[16][16];
     BufferedImage groundBtm = null;
@@ -79,13 +77,11 @@ public class mainMenu implements ActionListener{
     BufferedImage skyBtm = null;
     BufferedImage skyTop = null;
 
-
       // Instructions
     JLabel instructionsTitle = new JLabel("HOW TO PLAY");
     JTextArea instructionsText = new JTextArea();
     JScrollPane instructionsScroll;
     JButton instructionsBackBtn = new JButton("BACK TO MENU");
-
 
     // Chat
     JLayeredPane layeredPane = new JLayeredPane();
@@ -93,7 +89,6 @@ public class mainMenu implements ActionListener{
     JTextArea chatTextArea = new JTextArea("Press shift to close chat and enter to reopen it.");
     JScrollPane chatLabel = new JScrollPane(chatTextArea);
     JTextField chatTextField = new JTextField("Click here to type a message and press enter to send.");
-
 
     // Methods
     @Override
@@ -106,8 +101,11 @@ public class mainMenu implements ActionListener{
             gamePanel.repaint();
         }else if(evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server")){
                 bombTimer--;
-                ssm.sendText("TIME:" + bombTimer);
+                ssm.sendText("TIME:" + bombTimer); 
             if (bombTimer <= 0) {
+                gracePeriod = true;
+                graceTimer = 5;
+                graceCountdown.start();
                 for (Player p : players.values()) {
                     if (p.isIt) {
                         ssm.sendText("EXPLODE:" + p.name);
@@ -122,17 +120,15 @@ public class mainMenu implements ActionListener{
                         break;
                     }
                 }
-               
+                
                 pickRandomIt();  // THIS RESTARTS THE BOMB LOOP AGAIN, need to add the grace phase
                 }
             }
-
 
         // These are all network and message related
         //
         if (ssm != null && evt.getSource() == ssm) {
             String msg = ssm.readText();
-
 
             // Assigns every player with their color and username
             //
@@ -140,10 +136,9 @@ public class mainMenu implements ActionListener{
                 String[] data = msg.substring(7).split(",");
                 String user = data[0];
                 int colorIdx = Integer.parseInt(data[1]);
-               
+                
                 players.put(user, new Player(100, 100, playerColors[colorIdx], user));
             }
-
 
             // Keeps updating player positions
             //
@@ -153,7 +148,6 @@ public class mainMenu implements ActionListener{
                 int newX = Integer.parseInt(data[1]);
                 int newY = Integer.parseInt(data[2]);
 
-
                 if (players.containsKey(user)) {
                     players.get(user).x = newX;
                     players.get(user).y = newY;
@@ -161,7 +155,6 @@ public class mainMenu implements ActionListener{
                     players.put(user, new Player(newX, newY, Color.GRAY, user));
                 }
             }
-
 
             if (msg.startsWith("TAGGED:")) {
                 String target = msg.substring(7);
@@ -172,11 +165,11 @@ public class mainMenu implements ActionListener{
                 System.out.println(target + " was given bomb");
             }
 
-
             if (msg.startsWith("EXPLODE:")) {
                 String loser = msg.substring(8);
                 System.out.println(loser + " went BOOM!");
-               
+                roundsPlayed += 1;
+
                 //Adjust scoreobard
                 for (Player p : players.values()) {
                     p.isIt = false;
@@ -187,23 +180,19 @@ public class mainMenu implements ActionListener{
                 }
             }
 
-
             if (msg.startsWith("TIME:")) {
                 bombTimer = Integer.parseInt(msg.substring(5));
             }
-
 
             if (msg.startsWith("CHATUSER")){
                 String msgUser = msg.substring(8);
                 chatTextArea.append("\n" + msgUser);            
             }
 
-
             if (msg.startsWith("CHATTEXT")){
                 String msgText = msg.substring(8);
                 chatTextArea.append(msgText);
             }
-
 
             // SERVER SIDE
             if (csChooser.getSelectedItem().equals("Server")) {
@@ -213,13 +202,12 @@ public class mainMenu implements ActionListener{
                     frame.revalidate();
                     frame.repaint();
                 }
-            }
+            } 
             // CLIENT SIDE - Loads map based on server message, sends text containing username and color
             else {
                 if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
                     String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
                     loadMap(mapFile);
-
 
                     SwingUtilities.invokeLater(new Runnable() {
                         public void run() {
@@ -228,7 +216,6 @@ public class mainMenu implements ActionListener{
                             players.put(myUsername, localPlayer);
                             gameActive = true;
                             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-
 
                             frame.setContentPane(layeredPane);
                             frame.requestFocusInWindow();
@@ -242,32 +229,27 @@ public class mainMenu implements ActionListener{
         if (evt.getSource() == map1Btn || evt.getSource() == map2Btn) {
                     String mapFile = (evt.getSource() == map1Btn) ? "map1.csv" : "map2.csv";
                     loadMap(mapFile);
-                   
+                    
                     if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
 
-
-                    myUsername = username.getText();
+                    myUsername = username.getText(); 
                     localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
                     players.put(myUsername, localPlayer);
-
 
                     if (ssm != null) {
                         ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
                     }
-                   
+                    
                     gameActive = true;
                     frame.setContentPane(layeredPane);
                     frame.revalidate();
                     frame.repaint();
-
 
                     frame.requestFocusInWindow();
                     if (csChooser.getSelectedItem().equals("Server")) {
                         pickRandomIt();
                     }
                 }
-
-
 
 
         if (evt.getSource() == startGame) {
@@ -291,7 +273,7 @@ public class mainMenu implements ActionListener{
                 currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
         }
-       
+        
         else if (evt.getSource() == connectBtn) {
             if (csChooser.getSelectedItem().equals("Server")) {
                 // Setup Server
@@ -308,8 +290,8 @@ public class mainMenu implements ActionListener{
                 ssm = new SuperSocketMaster(ip, 1234, this);
                 if (ssm.connect()) {
                     // Client sends "JOIN" so Server knows to switch screens
-                    ssm.sendText("JOIN");
-                   
+                    ssm.sendText("JOIN"); 
+                    
                     waitingLabel.setText("CONNECTED! WAITING FOR HOST...");
                     waitingLabel.setVisible(true);
                     connectBtn.setVisible(false);
@@ -329,14 +311,13 @@ public class mainMenu implements ActionListener{
             ssm.sendText("CHATUSER" + myUsername);
             ssm.sendText("CHATTEXT" + strLine);
             chatTextField.setText("");
-            chatTextArea.append( "\n" + myUsername + ":" + strLine);  
+            chatTextArea.append( "\n" + myUsername + ":" + strLine);   
             chatTextField.setFocusable(false);
         }
-       
+        
         frame.revalidate();
         frame.repaint();
     }
-
 
     public mainMenu(){
       // Main Menu
@@ -365,32 +346,25 @@ public class mainMenu implements ActionListener{
         connectPanel.setPreferredSize(new Dimension(1280, 720));
         connectPanel.setBackground(new Color(220, 220, 220));
 
-
         // Left Sidebar
         username.setBounds(30, 30, 260, 45);
         connectPanel.add(username);
 
-
         SPCtextPanel1.setBounds(30, 90, 260, 30);
         connectPanel.add(SPCtextPanel1);
-
 
         leftColorButton.setBounds(30, 320, 40, 60);
         rightColorButton.setBounds(250, 320, 40, 60);
 
-
         leftColorButton.addActionListener(this);
         rightColorButton.addActionListener(this);
-
 
         connectPanel.add(leftColorButton);
         connectPanel.add(rightColorButton);
 
-
         colorPreview.setBounds(110, 300, 100, 100);
         colorPreview.setBackground(playerColors[currentColorIndex]);
         connectPanel.add(colorPreview);
-
 
         // Right Side
         JLabel titleLabel = new JLabel("TAG GAME", SwingConstants.CENTER);
@@ -398,27 +372,22 @@ public class mainMenu implements ActionListener{
         titleLabel.setBounds(350, 40, 850, 100);
         connectPanel.add(titleLabel);
 
-
         csChooser.setBounds(450, 200, 650, 60);
         connectPanel.add(csChooser);
         csChooser.addActionListener(this);
 
-
         IPAdressField.setBounds(450, 300, 400, 50);
         connectPanel.add(IPAdressField);
-
 
         connectBtn.setFont(newFont);
         connectBtn.setBounds(450, 400, 650, 80);
         connectBtn.addActionListener(this);
         connectPanel.add(connectBtn);
 
-
         backBtn.setFont(newFont);
         backBtn.setBounds(450, 520, 650, 70);
         backBtn.addActionListener(this);
         connectPanel.add(backBtn);
-
 
         waitingLabel.setForeground(Color.BLACK);
         waitingLabel.setOpaque(true);
@@ -428,10 +397,7 @@ public class mainMenu implements ActionListener{
         waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         waitingLabel.setVisible(false);
 
-
         connectPanel.add(waitingLabel);
-
-
 
 
         // Instructions Panel
@@ -439,17 +405,14 @@ public class mainMenu implements ActionListener{
         instructionsPanel.setPreferredSize(new Dimension(1280, 720));
         instructionsPanel.setBackground(new Color(220, 220, 220));
 
-
         instructionsTitle.setFont(new Font("Arial", Font.BOLD, 72));
         instructionsTitle.setBounds(350, 30, 600, 90);
         instructionsPanel.add(instructionsTitle);
-
 
         instructionsText.setEditable(false);
         instructionsText.setLineWrap(true);
         instructionsText.setWrapStyleWord(true);
         instructionsText.setFont(new Font("Arial", Font.PLAIN, 22));
-
 
         instructionsText.setText(
             "GAMEPLAY:\n\n" +
@@ -457,23 +420,19 @@ public class mainMenu implements ActionListener{
             "If you are IT, your goal is to tag another player. If you are not IT, " +
             "your goal is to avoid being tagged.\n\n" +
 
-
             "CONTROLS:\n\n" +
             "W - Jump\n" +
             "A - Move Left\n" +
             "D - Move Right\n\n" +
-
 
             "CONNECTION MODES:\n\n" +
             "SERVER:\n" +
             "Select Server mode if you are hosting the game. The server starts the game " +
             "and waits for other players to connect.\n\n" +
 
-
             "CLIENT:\n" +
             "Select Client mode if you are joining a game. Enter the IP address of the " +
             "server and press CONNECT.\n\n" +
-
 
             "NETWORKING (SSM):\n\n" +
             "This game uses SuperSocketMaster (SSM) to send messages between players. " +
@@ -482,11 +441,9 @@ public class mainMenu implements ActionListener{
             "can distinguish between gameplay data and chat data."
         );
 
-
         instructionsScroll = new JScrollPane(instructionsText);
         instructionsScroll.setBounds(200, 150, 880, 430);
         instructionsPanel.add(instructionsScroll);
-
 
         instructionsBackBtn.setFont(newFont);
         instructionsBackBtn.setBounds(390, 600, 500, 70);
@@ -494,19 +451,16 @@ public class mainMenu implements ActionListener{
         instructionsPanel.add(instructionsBackBtn);
 
 
-
-
         //Map Select Panel
         mapSelectPanel.setLayout(null);
         mapSelectPanel.setPreferredSize(new Dimension(1280,720));
-       
+        
         map1Btn.setBounds(200, 300, 300, 300);
         map1Btn.addActionListener(this);
         mapSelectPanel.add(map1Btn);
         map2Btn.setBounds(700, 300, 300, 300);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
-
 
         // Load the Tiles
         try {
@@ -518,10 +472,8 @@ public class mainMenu implements ActionListener{
             System.out.println("Error: Could not find image files in 'Map Tiles' folder.");
         }
 
-
         gameTimer = new Timer(1000/60, this);
         gameTimer.start();
-
 
         frame.addKeyListener(new KeyAdapter() {
             @Override
@@ -530,7 +482,6 @@ public class mainMenu implements ActionListener{
             public void keyReleased(KeyEvent e) { keys[e.getKeyCode()] = false; }
         });
         frame.setFocusable(true);
-
 
         //Chat
         gamePanel.setBounds(0, 0, 1280, 720);
@@ -552,19 +503,17 @@ public class mainMenu implements ActionListener{
         layeredPane.add(gamePanel, JLayeredPane.DEFAULT_LAYER);
         layeredPane.add(chatPanel, JLayeredPane.PALETTE_LAYER);
 
-
         //Current Panel [MainMenuPanel]
         frame.setContentPane(mainMenuPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.pack();
-        frame.setVisible(true);  
+        frame.setVisible(true);   
     }
-
 
     private void loadMap(String fileName) {
         File mapFile = new File("MAPS/" + fileName);
-       
+        
         try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
             String line;
             int row = 0;
@@ -581,15 +530,13 @@ public class mainMenu implements ActionListener{
         }
     }
 
-
     private class GamePanel extends JPanel {
-
 
         public GamePanel() {
             this.setPreferredSize(new Dimension(1280, 720));
             this.setLayout(null);
         }
-       
+        
         @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -598,7 +545,6 @@ public class mainMenu implements ActionListener{
                     for (int c = 0; c < 16; c++) {
                         int x = c * 80;
                         int y = r * 45;
-
 
                         if (mapData[r][c].equals("bg")) {
                             g.drawImage(groundBtm, x, y, 80, 45, null);
@@ -632,7 +578,6 @@ public class mainMenu implements ActionListener{
         }
     }
 
-
     class Player {
         int x, y, width = 40, height = 40;
         Color color;
@@ -640,18 +585,15 @@ public class mainMenu implements ActionListener{
         int score = 0;
         boolean isIt = false;
 
-
         public Player(int x, int y, Color color, String name) {
             this.x = x; this.y = y; this.color = color; this.name = name;
         }
 
-
         public void draw(Graphics g) {
             // Draw Highlight if IT
             if (isIt) {
-                g.setColor(new Color(255, 50, 50, 100));
+                g.setColor(new Color(255, 50, 50, 100)); 
                 g.fillOval(x - 10, y - 10, width + 30, height + 30);
-
 
                 g.setFont(new Font("Arial", Font.BOLD, 25));
                 g.setColor(Color.RED);
@@ -660,48 +602,42 @@ public class mainMenu implements ActionListener{
                     g.drawString(Integer.toString(bombTimer), x, y - 20);
                 }
 
-
             }
-           
+            
             g.setColor(color);
             g.fillRect(x, y, width, height);
-           
+            
             g.setColor(Color.BLACK);
             String displayName = name + (isIt ? " 💣" : "");
             g.drawString(displayName, x, y - 5);
         }
     }
 
-
     private void handleMovement() {
         if (!gameActive) return;
         if (localPlayer == null) return;
-
+        if (gracePeriod) return;
 
         int speed = 5;
         int nextX = localPlayer.x;
         int nextY = localPlayer.y;
 
-
         // Left/Right Movement
         if (keys[KeyEvent.VK_A]) nextX -= speed;
         if (keys[KeyEvent.VK_D]) nextX += speed;
-
 
         // Horizontal Collision Check
         if (!isSolid(nextX, localPlayer.y) && !isSolid(nextX + 39, localPlayer.y + 39)) {
             localPlayer.x = nextX;
         }
 
-
         // Gravity & Jumping
         vy += 1;
-        boolean onGround = isSolid(localPlayer.x, localPlayer.y + 41) ||
+        boolean onGround = isSolid(localPlayer.x, localPlayer.y + 41) || 
                    isSolid(localPlayer.x + 39, localPlayer.y + 41);
         if (keys[KeyEvent.VK_W] && onGround) {
             vy = -15;
         }
-
 
         // Vertical Collision Check
         int nextYWithGravity = localPlayer.y + vy;
@@ -711,12 +647,10 @@ public class mainMenu implements ActionListener{
             vy = 0;
         }
 
-
         // Network Sync
         if (ssm != null) {
             ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
         }
-
 
         if (keys[KeyEvent.VK_SHIFT]){
             if(chatPanel.isVisible()){
@@ -732,27 +666,23 @@ public class mainMenu implements ActionListener{
         }
     }
 
-
     public boolean isSolid(int pixelX, int pixelY) {
         int col = pixelX / 80;
         int row = pixelY / 45;
         if (row < 0 || row >= 16 || col < 0 || col >= 16) return true;
         return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
     }
-   
+    
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
 
-
         for (Player other : players.values()) {
             if (other == localPlayer) continue;
-
 
             // Rectangle Collision
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
-
 
             if (myRect.intersects(otherRect)) {
                 // Transfer Bomb
@@ -762,13 +692,12 @@ public class mainMenu implements ActionListener{
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
                 }
-               
+                
                 // Knockback
                 applyKnockback(other);
             }
         }
     }
-
 
     private void applyKnockback(Player other) {
         // Launch opposite directions
@@ -780,7 +709,6 @@ public class mainMenu implements ActionListener{
         ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
     }
 
-
     // Picks random player to be IT
     //
     public void pickRandomIt() {
@@ -789,16 +717,14 @@ public class mainMenu implements ActionListener{
         int randomIndex = (int)(Math.random() * names.length);
         String randomPlayer = (String)names[randomIndex];
 
-
         if (ssm != null) {
             ssm.sendText("TAGGED:" + randomPlayer);
         }
         players.get(randomPlayer).isIt = true;
-        bombTimer = 15;
+        bombTimer = 15; 
         bombCountdown.start();    //THIS STARTS BOMB TIMER
     }
     public static void main(String[] args) {
         new mainMenu();
     }
 }
-
