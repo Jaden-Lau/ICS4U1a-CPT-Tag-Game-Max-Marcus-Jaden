@@ -1,4 +1,4 @@
-package TESTS;
+package MainJavaPrograms;
 
 public class Model {
     
