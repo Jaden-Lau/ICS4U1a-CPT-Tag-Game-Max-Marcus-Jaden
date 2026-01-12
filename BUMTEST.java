@@ -1,4 +1,4 @@
-package TESTS;
+
 
 import java.awt.*;
 import java.awt.event.*;
@@ -8,7 +8,9 @@ import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class mainMenu2 implements ActionListener{
+import TESTS.SuperSocketMaster;
+
+public class BUMTEST implements ActionListener{
     // Properties
     JFrame frame = new JFrame("TAG Game");
     JPanel mainMenuPanel = new JPanel();
@@ -440,7 +442,7 @@ public class mainMenu2 implements ActionListener{
         }
     }
 
-    public mainMenu2(){
+    public BUMTEST(){
       // Main Menu
         mainMenuPanel.setLayout(null);
         mainMenuPanel.setPreferredSize(new Dimension(1280, 720));
@@ -955,6 +957,6 @@ public class mainMenu2 implements ActionListener{
 
 
     public static void main(String[] args) {
-        new mainMenu2();
+        new BUMTEST();
     }
 }
