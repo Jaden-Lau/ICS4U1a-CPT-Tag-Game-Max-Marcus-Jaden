@@ -772,11 +772,11 @@ public class BoomTag extends JFrame implements ActionListener {
         int randomIndex = (int)(Math.random() * names.length);
         String randomPlayer = (String)names[randomIndex];
 
-        if (ssm != null) ssm.sendText("TAGGED:" + randomPlayer);
-        
-        if (players.get(randomPlayer) != null) {
-            players.get(randomPlayer).isIt = true;
+        if (ssm != null){
+            ssm.sendText("TAGGED:" + randomPlayer);
         }
+
+        players.get(randomPlayer).isIt = true;
         bombTimer = 15; 
         bombCountdown.start();
     }
