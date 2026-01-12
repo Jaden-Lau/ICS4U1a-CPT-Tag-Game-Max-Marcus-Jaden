@@ -211,7 +211,12 @@ public class BoomTag extends JFrame implements ActionListener {
 
         chatTextField.addActionListener(this);
         
-        chatPanel.add(new JScrollPane(chatTextArea), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(chatTextArea);
+        scroll.setBorder(null);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+
+        chatPanel.add(scroll, BorderLayout.CENTER);
         chatPanel.add(chatTextField, BorderLayout.SOUTH);
 
         layeredPane.setLayout(null);
@@ -550,14 +555,10 @@ public class BoomTag extends JFrame implements ActionListener {
         }
         else if (evt.getSource() == chatTextField) {
             String strLine = chatTextField.getText();
-            if (!strLine.trim().isEmpty()) {
-                ssm.sendText("CHATUSER" + myUsername);
-                ssm.sendText("CHATTEXT" + strLine);
-                chatTextField.setText("");
-                chatTextArea.append("\n" + myUsername + ": " + strLine);
-                chatTextField.setFocusable(false);
-                this.requestFocusInWindow(); // Give focus back to game
-            }
+            ssm.sendText("CHAT:" + myUsername + ":" + strLine);
+            chatTextField.setText("");
+            chatTextArea.append("\n" + myUsername + ": " + strLine);
+            chatTextField.setFocusable(false);
         }
     }
 
@@ -601,14 +602,12 @@ public class BoomTag extends JFrame implements ActionListener {
         else if (msg.startsWith("TIME:")) {
             bombTimer = Integer.parseInt(msg.substring(5));
         }
-        else if (msg.startsWith("CHATUSER")){
-            String msgUser = msg.substring(8);
-            chatTextArea.append("\n" + msgUser + ": ");            
+        
+        else if (msg.startsWith("CHAT:")) {
+            String[] parts = msg.split(":", 3);
+            chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
         }
-        else if (msg.startsWith("CHATTEXT")){
-            String msgText = msg.substring(8);
-            chatTextArea.append(msgText);
-        }
+
         
         // Server: Client joined
         if (csChooser.getSelectedItem().equals("Server") && msg.equals("JOIN")) {
@@ -658,14 +657,16 @@ public class BoomTag extends JFrame implements ActionListener {
             myUsername = username.getText();
             localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
             players.put(myUsername, localPlayer);
-            
-            if (ssm != null) {
-                ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-            }
-            
             gameActive = true;
+            ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
+            chatPanel.setVisible(true);
+
             cardLayout.show(mainContainer, "GAME");
             this.requestFocusInWindow();
+
+            if (csChooser.getSelectedItem().equals("Server")) {
+                pickRandomIt();
+            }
         });
     }
 
@@ -718,17 +719,13 @@ public class BoomTag extends JFrame implements ActionListener {
 
         // Chat Toggle Logic
         if (keys[KeyEvent.VK_SHIFT]) {
-            if(chatPanel.isVisible()){
-                chatTextField.setFocusable(false);
-                chatPanel.setVisible(false);
-                this.requestFocusInWindow();
-            }
+            chatPanel.setVisible(false);
         }
+
         if (keys[KeyEvent.VK_ENTER]) {
             if(!chatPanel.isVisible()){
-                chatPanel.setVisible(true);
                 chatTextField.setFocusable(true);
-                chatTextField.requestFocus();
+                chatPanel.setVisible(true);
             }
         }
     }
@@ -768,16 +765,21 @@ public class BoomTag extends JFrame implements ActionListener {
 
     public void pickRandomIt() {
         if (players.isEmpty()) return;
-        Object[] names = players.keySet().toArray();
-        int randomIndex = (int)(Math.random() * names.length);
-        String randomPlayer = (String)names[randomIndex];
 
-        if (ssm != null){
+        bombCountdown.stop();
+        bombTimer = 15;
+
+        Object[] names = players.keySet().toArray();
+        String randomPlayer = (String) names[(int)(Math.random() * names.length)];
+
+        for (Player p : players.values()) p.isIt = false;
+        players.get(randomPlayer).isIt = true;
+
+        if (ssm != null) {
             ssm.sendText("TAGGED:" + randomPlayer);
+            ssm.sendText("TIME:" + bombTimer);
         }
 
-        players.get(randomPlayer).isIt = true;
-        bombTimer = 15; 
         bombCountdown.start();
     }
 
