@@ -103,6 +103,7 @@ public class mainMenu implements ActionListener{
                 bombTimer--;
                 ssm.sendText("TIME:" + bombTimer); 
             if (bombTimer <= 0) {
+                bombCountdown.stop();
                 gracePeriod = true;
                 graceTimer = 5;
                 graceCountdown.start();
@@ -114,16 +115,25 @@ public class mainMenu implements ActionListener{
                         for (Player v : players.values()) {
                             if(!v.name.equals(p.name)){
                                     v.score++;
-                                System.out.println("Server side added 1 to " + p);
                             }
                         }
                         break;
                     }
                 }
-                
-                pickRandomIt();  // THIS RESTARTS THE BOMB LOOP AGAIN, need to add the grace phase
-                }
+                pickRandomIt();
             }
+        }else if(evt.getSource() == graceCountdown && csChooser.getSelectedItem().equals("Server")){
+            graceTimer--;
+            ssm.sendText("GRACETIME:" + graceTimer);
+            if (graceTimer < 0){
+                graceTimer = 5;
+                graceCountdown.stop();
+                gracePeriod = false;
+                bombTimer = 15; 
+                bombCountdown.start();    //THIS STARTS BOMB TIMER
+            }
+        }
+
 
         // These are all network and message related
         //
@@ -160,7 +170,7 @@ public class mainMenu implements ActionListener{
                 String target = msg.substring(7);
                 for (Player p : players.values()) p.isIt = false;
                 if (players.containsKey(target)) {
-                    players.get(target).isIt = true;
+                    players.get(target).isIt = true;                                    
                 }
                 System.out.println(target + " was given bomb");
             }
@@ -169,7 +179,7 @@ public class mainMenu implements ActionListener{
                 String loser = msg.substring(8);
                 System.out.println(loser + " went BOOM!");
                 roundsPlayed += 1;
-
+                graceTimer = 5;
                 //Adjust scoreobard
                 for (Player p : players.values()) {
                     p.isIt = false;
@@ -182,6 +192,14 @@ public class mainMenu implements ActionListener{
 
             if (msg.startsWith("TIME:")) {
                 bombTimer = Integer.parseInt(msg.substring(5));
+            }
+
+            if (msg.startsWith("GRACETIME:")) {
+                graceTimer = Integer.parseInt(msg.substring(10));
+                gracePeriod = true;
+                if (graceTimer <= 0){
+                    gracePeriod = false;
+                }
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -216,7 +234,7 @@ public class mainMenu implements ActionListener{
                             players.put(myUsername, localPlayer);
                             gameActive = true;
                             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
-
+                            graceTimer = 5;
                             frame.setContentPane(layeredPane);
                             frame.requestFocusInWindow();
                             frame.revalidate();
@@ -248,6 +266,9 @@ public class mainMenu implements ActionListener{
                     frame.requestFocusInWindow();
                     if (csChooser.getSelectedItem().equals("Server")) {
                         pickRandomIt();
+                        gracePeriod = true;
+                        graceTimer = 5;
+                        graceCountdown.start();
                     }
                 }
 
@@ -575,6 +596,23 @@ public class mainMenu implements ActionListener{
             for (Player p : players.values()) {
                 p.draw(g);
             }
+            if(gameActive && gracePeriod){
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 250, 1280, 150);
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 50));
+                 String text;
+                if (graceTimer > 0) {
+                    text = "STARTING IN " + graceTimer;
+                } else {
+                    text = "GO!";
+                }
+                    
+                // Center text logic
+                FontMetrics metrics = g.getFontMetrics();
+                int x = (1280 - metrics.stringWidth(text)) / 2;
+                g.drawString(text, x, 340);
+            }
         }
     }
 
@@ -608,7 +646,7 @@ public class mainMenu implements ActionListener{
             g.fillRect(x, y, width, height);
             
             g.setColor(Color.BLACK);
-            String displayName = name + (isIt ? " 💣" : "");
+            String displayName = name;
             g.drawString(displayName, x, y - 5);
         }
     }
@@ -721,8 +759,6 @@ public class mainMenu implements ActionListener{
             ssm.sendText("TAGGED:" + randomPlayer);
         }
         players.get(randomPlayer).isIt = true;
-        bombTimer = 15; 
-        bombCountdown.start();    //THIS STARTS BOMB TIMER
     }
     public static void main(String[] args) {
         new mainMenu();
