@@ -1,3 +1,4 @@
+package TESTS;
 
 
 import java.awt.*;
