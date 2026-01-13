@@ -24,10 +24,16 @@ public class BOOMTAG extends JFrame implements ActionListener {
     Player localPlayer;
     boolean[] keys = new boolean[256];
     int vy = 0;
+    String winnerName = "";
 
     int bombTimer; 
     Timer bombCountdown = new Timer(1000, this);
+    int graceTimer;
+    Timer graceCountdown = new Timer(1000,this);
     boolean gameActive = false;
+    boolean gracePeriod = false;
+    boolean gameOver = false;
+    int roundsPlayed = 0;
 
     // Connect Panel
     JPanel connectPanel = new JPanel();
@@ -56,6 +62,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     GamePanel gamePanel = new GamePanel();
     String[][] mapData = new String[16][16];
     BufferedImage groundBtm, groundTop, skyBtm, skyTop;
+
+    // Game Over
+    JPanel endPanel = new endPanel();
 
     // Chat
     JLayeredPane layeredPane = new JLayeredPane();
@@ -499,25 +508,42 @@ public class BOOMTAG extends JFrame implements ActionListener {
         
         // Bomb Logic (Server)
         else if(evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server")){
-            bombTimer--;
-            ssm.sendText("TIME:" + bombTimer); 
+                bombTimer--;
+                ssm.sendText("TIME:" + bombTimer); 
             if (bombTimer <= 0) {
+                bombCountdown.stop();
+                graceCountdown.stop();
+                graceTimer = 5;
+                gracePeriod = true;
+                graceCountdown.start();
                 for (Player p : players.values()) {
                     if (p.isIt) {
                         ssm.sendText("EXPLODE:" + p.name);
                         p.isIt = false;
-                        //Adjust scoreboard
+                        p.isAlive = false;
+                        //Adjust scoreobard
                         for (Player v : players.values()) {
-                            if(!v.name.equals(p.name)){
-                                v.score++;
+                            if(!v.name.equals(p.name) && v.isAlive){
+                                    v.score++;
                             }
                         }
                         break;
                     }
                 }
-                pickRandomIt(); 
+                pickRandomIt();
+            }
+        }else if(evt.getSource() == graceCountdown && csChooser.getSelectedItem().equals("Server")){
+            graceTimer--;
+            ssm.sendText("GRACETIME:" + graceTimer);
+            if (graceTimer < 0){
+                graceTimer = 5;
+                graceCountdown.stop();
+                gracePeriod = false;
+                bombTimer = 15; 
+                bombCountdown.start();    //THIS STARTS BOMB TIMER
             }
         }
+
 
         // Network
         if (ssm != null && evt.getSource() == ssm) {
@@ -590,18 +616,40 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 players.get(target).isIt = true;
             }
         }
-        else if (msg.startsWith("EXPLODE:")) {
-            String loser = msg.substring(8);
-            for (Player p : players.values()) {
-                p.isIt = false;
-                if (!p.name.equals(loser)) {
-                    p.score++;
+        if (msg.startsWith("EXPLODE:")) {
+                String loser = msg.substring(8);
+                System.out.println(loser + " went BOOM!");
+                roundsPlayed += 1;
+                graceTimer = 5;
+                
+                if (players.containsKey(loser)){
+                    players.get(loser).isAlive = false;
+                    players.get(loser).isIt = false;
+                }
+                //Adjust scoreobard
+                for (Player p : players.values()) {
+                    if (!p.name.equals(loser) && p.isAlive) {
+                        p.score++;
+                        System.out.println("Client side - added 1 to " + p);
+                    }
                 }
             }
-        }
         else if (msg.startsWith("TIME:")) {
             bombTimer = Integer.parseInt(msg.substring(5));
         }
+
+        if (msg.startsWith("GRACETIME:")) {
+                graceTimer = Integer.parseInt(msg.substring(10));
+                gracePeriod = true;
+                if (graceTimer <= 0){
+                    gracePeriod = false;
+                }
+            }
+
+            if (msg.startsWith("GAMEOVER:")){
+                winnerName = msg.substring(9);
+                endGame();  
+            }
         
         else if (msg.startsWith("CHAT:")) {
             String[] parts = msg.split(":", 3);
@@ -660,12 +708,15 @@ public class BOOMTAG extends JFrame implements ActionListener {
             gameActive = true;
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
             chatPanel.setVisible(true);
-
             cardLayout.show(mainContainer, "GAME");
             this.requestFocusInWindow();
 
             if (csChooser.getSelectedItem().equals("Server")) {
                 pickRandomIt();
+                graceCountdown.stop();
+                graceTimer = 5;
+                gracePeriod = true;
+                graceCountdown.start();
             }
         });
     }
@@ -688,7 +739,10 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     private void handleMovement() {
-        if (!gameActive || localPlayer == null) return;
+        if (!gameActive) return;
+        if (localPlayer == null) return;
+         if (!localPlayer.isAlive) return;
+        if (gracePeriod) return;
 
         int speed = 5;
         int nextX = localPlayer.x;
@@ -739,10 +793,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
     
     private void checkCollisions() {
-        if (!gameActive || localPlayer == null || !localPlayer.isIt) return;
+        if (!gameActive) return;
+        if (localPlayer == null || !localPlayer.isIt) return;
+        if (!localPlayer.isAlive) return;
 
         for (Player other : players.values()) {
             if (other == localPlayer) continue;
+            if (!other.isAlive) continue;
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
@@ -763,25 +820,36 @@ public class BOOMTAG extends JFrame implements ActionListener {
         }
     }
 
+    private void endGame(){
+        bombCountdown.stop();
+        graceCountdown.stop();
+        gameActive = false;
+        gracePeriod = false;
+        this.setContentPane(endPanel);
+        this.revalidate();
+        this.repaint();
+    }
+
     public void pickRandomIt() {
         if (players.isEmpty()) return;
-
-        bombCountdown.stop();
-        bombTimer = 15;
-
-        Object[] names = players.keySet().toArray();
-        String randomPlayer = (String) names[(int)(Math.random() * names.length)];
-
-        for (Player p : players.values()) p.isIt = false;
-        players.get(randomPlayer).isIt = true;
-
-        if (ssm != null) {
-            ssm.sendText("TAGGED:" + randomPlayer);
-            ssm.sendText("TIME:" + bombTimer);
+        if (gameOver) return;
+        java.util.List<String> survivors = new java.util.ArrayList<>();
+        for (Player p : players.values()) {
+            if (p.isAlive) survivors.add(p.name);
         }
-
-        bombCountdown.start();
-    }
+        if (survivors.size() > 1) {
+            String newIt = survivors.get((int)(Math.random() * survivors.size()));
+            if (ssm != null) {
+                ssm.sendText("TAGGED:" + newIt);
+            }
+            players.get(newIt).isIt = true;
+        }else if (survivors.size() == 1){
+            String winner = survivors.get(0);
+            ssm.sendText("GAMEOVER:" + winner);
+            gameOver = true;
+            endGame();
+        }
+        }
 
     // Class
     class Player {
@@ -790,6 +858,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         String name;
         int score = 0;
         boolean isIt = false;
+        boolean isAlive = true;
 
         public Player(int x, int y, Color color, String name) {
             this.x = x; this.y = y; this.color = color; this.name = name;
@@ -814,6 +883,28 @@ public class BOOMTAG extends JFrame implements ActionListener {
             g.setFont(new Font("Arial", Font.PLAIN, 12));
             String displayName = name + (isIt ? " 💣" : "");
             g.drawString(displayName, x, y - 5);
+        }
+    }
+
+    private class endPanel extends JPanel{
+
+        public endPanel(){
+            this.setPreferredSize(new Dimension(1280,720));
+            this.setLayout(null);
+        }
+
+        @Override
+        public void paintComponent(Graphics g){
+            super.paintComponent(g);
+        
+            g.setColor(new Color(0, 0, 0, 220));
+                g.fillRect(0, 0, 1280, 720);
+                g.setColor(Color.YELLOW);
+                g.setFont(new Font("Arial", Font.BOLD, 60));
+                String winText = "GAME OVER! WINNER: " + winnerName;
+                int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
+                g.drawString(winText, x, 360);
+            
         }
     }
 
@@ -855,7 +946,26 @@ public class BOOMTAG extends JFrame implements ActionListener {
             
             // Draw Players
             for (Player p : players.values()) {
+                if(!p.isAlive) continue;
                 p.draw(g);
+            }
+
+            if(gameActive && gracePeriod){
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 250, 1280, 150);
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 50));
+                 String text;
+                if (graceTimer > 0) {
+                    text = "STARTING IN " + graceTimer;
+                } else {
+                    text = "GO!";
+                }
+                
+                // Center text logic
+                FontMetrics metrics = g.getFontMetrics();
+                int x = (1280 - metrics.stringWidth(text)) / 2;
+                g.drawString(text, x, 340);
             }
         }
     }
