@@ -185,7 +185,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 IPAdressField.setText("Enter IP Address");
             }
         });
-        connectBtn.addActionListener(this);
+        
         connectBackBtn.addActionListener(e -> dispose());
     }
 
@@ -837,7 +837,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 waitingLabel.setVisible(true);
                 connectBtn.setVisible(false);
                 connectBackBtn.setVisible(false);
-                connectBtn.addActionListener(this);
+                
             }
         }
     }
