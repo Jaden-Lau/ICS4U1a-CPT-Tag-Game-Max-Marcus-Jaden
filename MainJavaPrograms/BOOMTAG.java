@@ -174,7 +174,12 @@ public class BOOMTAG extends JFrame implements ActionListener {
         wrapper.add(center);
 
         connectPanel.add(wrapper, BorderLayout.CENTER);
+        waitingLabel.setForeground(Color.WHITE);
+        waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
+        waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        waitingLabel.setVisible(false);
 
+        connectPanel.add(waitingLabel, BorderLayout.SOUTH);
         // If client or server is chosen:
         modeChooser.addActionListener(e -> {
             if (modeChooser.getSelectedItem().equals("Server")) {
@@ -328,7 +333,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         waitingLabel.setBounds(450, 500, 650, 60);
         waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         waitingLabel.setVisible(false);
-        connectPanel.add(waitingLabel);
+        
 
     }
 
