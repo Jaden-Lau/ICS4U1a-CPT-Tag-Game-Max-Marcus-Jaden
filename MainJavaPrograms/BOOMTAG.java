@@ -717,7 +717,7 @@ public class BoomTag extends JFrame implements ActionListener {
             ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
         }
 
-        // Chat Toggle Logic
+        // Chat Toggle Logic   
         if (keys[KeyEvent.VK_SHIFT]) {
             chatPanel.setVisible(false);
         }
