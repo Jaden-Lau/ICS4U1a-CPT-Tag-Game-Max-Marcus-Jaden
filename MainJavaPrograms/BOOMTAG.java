@@ -828,11 +828,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (modeChooser.getSelectedItem().equals("Server")) {
             ssm = new SuperSocketMaster(1234, this);
             if (ssm.connect()) {
-                cardLayout.show(mainContainer, "GAME");
-                /*waitingLabel.setVisible(true);
-                connectBtn.setVisible(false);
-                connectBackBtn.setVisible(false);
-                modeChooser.setEnabled(false);*/
+                cardLayout.show(mainContainer, "CONNECT");
+                waitingLabel.setVisible(true);
             }
         } else {
             String ip = IPAdressField.getText();
