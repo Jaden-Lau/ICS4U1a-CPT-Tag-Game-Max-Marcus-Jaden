@@ -541,6 +541,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 gracePeriod = false;
                 bombTimer = 15; 
                 bombCountdown.start();    //THIS STARTS BOMB TIMER
+                pickRandomIt();
             }
         }
 
@@ -605,8 +606,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             if (players.containsKey(user)) {
                 players.get(user).x = newX;
                 players.get(user).y = newY;
-            } else {
-                players.put(user, new Player(newX, newY, Color.GRAY, user));
             }
         }
         else if (msg.startsWith("TAGGED:")) {
@@ -695,9 +694,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         loadMap(mapFile);
         if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
         startGameSession();
-        if (csChooser.getSelectedItem().equals("Server")) {
-            pickRandomIt();
-        }
     }
 
     private void startGameSession() {
@@ -712,7 +708,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             this.requestFocusInWindow();
 
             if (csChooser.getSelectedItem().equals("Server")) {
-                pickRandomIt();
                 graceCountdown.stop();
                 graceTimer = 5;
                 gracePeriod = true;
@@ -831,7 +826,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     public void pickRandomIt() {
+        if (!csChooser.getSelectedItem().equals("Server")) return;
         if (players.isEmpty()) return;
+        if (players.size() < 2) return;
         if (gameOver) return;
         java.util.List<String> survivors = new java.util.ArrayList<>();
         for (Player p : players.values()) {
@@ -844,8 +841,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
             }
             players.get(newIt).isIt = true;
         }else if (survivors.size() == 1){
-            String winner = survivors.get(0);
-            ssm.sendText("GAMEOVER:" + winner);
+            String winnerName = survivors.get(0);
+            ssm.sendText("GAMEOVER:" + winnerName);
             gameOver = true;
             endGame();
         }
