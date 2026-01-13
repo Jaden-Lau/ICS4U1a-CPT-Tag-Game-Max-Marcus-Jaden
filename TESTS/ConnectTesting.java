@@ -7,7 +7,7 @@ import java.io.*;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-
+//CHANGE ALL ConnectTesting to BOOMTAG to implement to main file
 public class ConnectTesting extends JFrame implements ActionListener {
 
     // Screen Properties
@@ -123,178 +123,178 @@ public class ConnectTesting extends JFrame implements ActionListener {
 
     private void setupConnectPanel() {
         
-            connectPanel.setBackground(Color.BLACK);
-            connectPanel.setLayout(new BorderLayout());
+        connectPanel.setBackground(Color.BLACK);
+        connectPanel.setLayout(new BorderLayout());
 
-            // Header
-            JPanel header = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    drawStylizedHeaderC(g, "CONNECT", getWidth() / 2);
-                }
-            };
-            header.setPreferredSize(new Dimension(WIDTH, 220));
-            header.setOpaque(false);
-            add(header, BorderLayout.NORTH);
+        // Header
+        JPanel header = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                drawStylizedHeaderC(g, "CONNECT", getWidth() / 2);
+            }
+        };
+        header.setPreferredSize(new Dimension(WIDTH, 220));
+        header.setOpaque(false);
+        add(header, BorderLayout.NORTH);
 
-            // Username, IP ADDress, Client/Server, Connect/Back
-            JPanel center = new JPanel();
-            center.setOpaque(false);
-            center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-            center.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        // Username, IP ADDress, Client/Server, Connect/Back
+        JPanel center = new JPanel();
+        center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+        center.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-            styleField(username);
-            styleField(IPAdressField);
-            styleCombo(modeChooser);
+        styleField(username);
+        styleField(IPAdressField);
+        styleCombo(modeChooser);
 
-            username.setMaximumSize(new Dimension(420, 45));
-            IPAdressField.setMaximumSize(new Dimension(420, 45));
-            modeChooser.setMaximumSize(new Dimension(420, 45));
+        username.setMaximumSize(new Dimension(420, 45));
+        IPAdressField.setMaximumSize(new Dimension(420, 45));
+        modeChooser.setMaximumSize(new Dimension(420, 45));
 
-            center.add(username);
-            center.add(Box.createVerticalStrut(15));
-            center.add(createColorSelector());
-            center.add(Box.createVerticalStrut(20));
-            center.add(modeChooser);
-            center.add(Box.createVerticalStrut(10));
-            center.add(IPAdressField);
-            center.add(Box.createVerticalStrut(20));
+        center.add(username);
+        center.add(Box.createVerticalStrut(15));
+        center.add(createColorSelector());
+        center.add(Box.createVerticalStrut(20));
+        center.add(modeChooser);
+        center.add(Box.createVerticalStrut(10));
+        center.add(IPAdressField);
+        center.add(Box.createVerticalStrut(20));
 
-            center.add(connectBtn);
-            center.add(Box.createVerticalStrut(1));
-            center.add(connectBackBtn);
-            connectPanel.add(header, BorderLayout.NORTH);
-            
-            JPanel wrapper = new JPanel(new GridBagLayout());
-            wrapper.setOpaque(false);
-            wrapper.add(center);
+        center.add(connectBtn);
+        center.add(Box.createVerticalStrut(1));
+        center.add(connectBackBtn);
+        connectPanel.add(header, BorderLayout.NORTH);
+        
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setOpaque(false);
+        wrapper.add(center);
 
-            connectPanel.add(wrapper, BorderLayout.CENTER);
+        connectPanel.add(wrapper, BorderLayout.CENTER);
 
-            // If client or server is chosen:
-            modeChooser.addActionListener(e -> {
-                if (modeChooser.getSelectedItem().equals("Server")) {
-                    IPAdressField.setEnabled(false);
-                    IPAdressField.setText("Server mode - no IP needed");
-                } else {
-                    IPAdressField.setEnabled(true);
-                    IPAdressField.setText("Enter IP Address");
-                }
-            });
+        // If client or server is chosen:
+        modeChooser.addActionListener(e -> {
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                IPAdressField.setEnabled(false);
+                IPAdressField.setText("Server mode - no IP needed");
+            } else {
+                IPAdressField.setEnabled(true);
+                IPAdressField.setText("Enter IP Address");
+            }
+        });
 
-            connectBackBtn.addActionListener(e -> dispose());
-        }
+        connectBackBtn.addActionListener(e -> dispose());
+    }
 
-        // Select colour
-        private JPanel createColorSelector() {
-            JPanel container = new JPanel();
-            container.setOpaque(false);
-            container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-            
-            SPCtextPanel1.setFont(new Font("Serif", Font.PLAIN, 20));
-            SPCtextPanel1.setForeground(new Color(180, 180, 180));
-            SPCtextPanel1.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // Select colour
+    private JPanel createColorSelector() {
+        JPanel container = new JPanel();
+        container.setOpaque(false);
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        
+        SPCtextPanel1.setFont(new Font("Serif", Font.PLAIN, 20));
+        SPCtextPanel1.setForeground(new Color(180, 180, 180));
+        SPCtextPanel1.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JPanel row = new JPanel();
-            row.setOpaque(false);
+        JPanel row = new JPanel();
+        row.setOpaque(false);
 
-            colorPreview.setPreferredSize(new Dimension(80, 80));
+        colorPreview.setPreferredSize(new Dimension(80, 80));
+        colorPreview.setBackground(playerColors[currentColorIndex]);
+        colorPreview.setBorder(BorderFactory.createLineBorder(new Color(90, 90, 90)));
+
+        leftColorButton.addActionListener(e -> {
+            currentColorIndex--;
+            if (currentColorIndex < 0)
+                currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
-            colorPreview.setBorder(BorderFactory.createLineBorder(new Color(90, 90, 90)));
+        });
 
-            leftColorButton.addActionListener(e -> {
-                currentColorIndex--;
-                if (currentColorIndex < 0)
-                    currentColorIndex = playerColors.length - 1;
-                colorPreview.setBackground(playerColors[currentColorIndex]);
-            });
+        rightColorButton.addActionListener(e -> {
+            currentColorIndex++;
+            if (currentColorIndex >= playerColors.length)
+                currentColorIndex = 0;
+            colorPreview.setBackground(playerColors[currentColorIndex]);
+        });
 
-            rightColorButton.addActionListener(e -> {
-                currentColorIndex++;
-                if (currentColorIndex >= playerColors.length)
-                    currentColorIndex = 0;
-                colorPreview.setBackground(playerColors[currentColorIndex]);
-            });
+        row.add(leftColorButton);
+        row.add(Box.createHorizontalStrut(15));
+        row.add(colorPreview);
+        row.add(Box.createHorizontalStrut(15));
+        row.add(rightColorButton);
 
-            row.add(leftColorButton);
-            row.add(Box.createHorizontalStrut(15));
-            row.add(colorPreview);
-            row.add(Box.createHorizontalStrut(15));
-            row.add(rightColorButton);
+        container.add(SPCtextPanel1);
+        container.add(Box.createVerticalStrut(10));
+        container.add(row);
 
-            container.add(SPCtextPanel1);
-            container.add(Box.createVerticalStrut(10));
-            container.add(row);
+        return container;
+    }
 
-            return container;
-        }
+    // Component backgrounds
+    private void styleField(JTextField field) {
+        field.setFont(new Font("Serif", Font.PLAIN, 22));
+        field.setForeground(Color.WHITE);
+        field.setBackground(Color.BLACK);
+        field.setCaretColor(Color.WHITE);
+        field.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+    }
 
-        // Component backgrounds
-        private void styleField(JTextField field) {
-            field.setFont(new Font("Serif", Font.PLAIN, 22));
-            field.setForeground(Color.WHITE);
-            field.setBackground(Color.BLACK);
-            field.setCaretColor(Color.WHITE);
-            field.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
-        }
+    private void styleCombo(JComboBox<String> combo) {
+        combo.setFont(new Font("Serif", Font.PLAIN, 22));
+        combo.setForeground(Color.WHITE);
+        combo.setBackground(Color.BLACK);
+        combo.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+    }
 
-        private void styleCombo(JComboBox<String> combo) {
-            combo.setFont(new Font("Serif", Font.PLAIN, 22));
-            combo.setForeground(Color.WHITE);
-            combo.setBackground(Color.BLACK);
-            combo.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
-        }
+    private JButton createMenuButton(String text) {
+        JButton button = new JButton(text);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setFont(new Font("Serif", Font.PLAIN, 28));
+        button.setForeground(new Color(200, 200, 200));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        private JButton createMenuButton(String text) {
-            JButton button = new JButton(text);
-            button.setAlignmentX(Component.CENTER_ALIGNMENT);
-            button.setFont(new Font("Serif", Font.PLAIN, 28));
-            button.setForeground(new Color(200, 200, 200));
-            button.setFocusPainted(false);
-            button.setContentAreaFilled(false);
-            button.setBorderPainted(false);
-            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setText("◈  " + text + "  ◈");
+                button.setForeground(Color.WHITE);
+            }
 
-            button.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    button.setText("◈  " + text + "  ◈");
-                    button.setForeground(Color.WHITE);
-                }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setText(text);
+                button.setForeground(new Color(200, 200, 200));
+            }
+        });
 
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    button.setText(text);
-                    button.setForeground(new Color(200, 200, 200));
-                }
-            });
+        return button;
+    }
 
-            return button;
-        }
+    private JButton createArrowButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Serif", Font.PLAIN, 36));
+        btn.setForeground(new Color(200, 200, 200));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        private JButton createArrowButton(String text) {
-            JButton btn = new JButton(text);
-            btn.setFont(new Font("Serif", Font.PLAIN, 36));
-            btn.setForeground(new Color(200, 200, 200));
-            btn.setContentAreaFilled(false);
-            btn.setBorderPainted(false);
-            btn.setFocusPainted(false);
-            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setForeground(Color.WHITE);
+            }
 
-            btn.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    btn.setForeground(Color.WHITE);
-                }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setForeground(new Color(200, 200, 200));
+            }
+        });
 
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    btn.setForeground(new Color(200, 200, 200));
-                }
-            });
-
-            return btn;
+        return btn;
         
     }
 
@@ -319,15 +319,12 @@ public class ConnectTesting extends JFrame implements ActionListener {
         g2d.drawLine(centerX + 40, lineY, centerX + 250, lineY);
         g2d.drawArc(centerX - 15, lineY - 8, 30, 15, 0, -180);
 
-
         waitingLabel.setForeground(Color.WHITE);
         waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
         waitingLabel.setBounds(450, 500, 650, 60);
         waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         waitingLabel.setVisible(false);
         connectPanel.add(waitingLabel);
-
-
 
     }
 
