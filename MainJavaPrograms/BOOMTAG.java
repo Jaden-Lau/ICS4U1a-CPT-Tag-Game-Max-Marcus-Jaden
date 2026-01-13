@@ -8,7 +8,7 @@ import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class BoomTag extends JFrame implements ActionListener {
+public class BOOMTAG extends JFrame implements ActionListener {
 
     // Screen Properties
     private static final int WIDTH = 1280;
@@ -64,7 +64,7 @@ public class BoomTag extends JFrame implements ActionListener {
     JTextField chatTextField = new JTextField("Type message here...");
 
     // Constructor
-    public BoomTag() {
+    public BOOMTAG() {
         setTitle("BOOM TAG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(WIDTH, HEIGHT);
@@ -861,6 +861,6 @@ public class BoomTag extends JFrame implements ActionListener {
     }
 
     public static void main(String[] args) {
-        new BoomTag();
+        new BOOMTAG();
     }
 }
