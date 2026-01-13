@@ -21,6 +21,7 @@ public class mainMenu implements ActionListener{
     JPanel mapSelectPanel = new JPanel();
 
     JPanel gamePanel = new GamePanel();
+    JPanel endPanel = new endPanel();
     SuperSocketMaster ssm = null;
 
     HashMap<String, Player> players = new HashMap<>();
@@ -36,6 +37,7 @@ public class mainMenu implements ActionListener{
     int roundsPlayed = 0;
     boolean gameActive = false;
     boolean gracePeriod = false;
+    boolean gameOver = false;
     int graceTimer;
     Timer graceCountdown = new Timer(1000,this);
     
@@ -111,9 +113,10 @@ public class mainMenu implements ActionListener{
                     if (p.isIt) {
                         ssm.sendText("EXPLODE:" + p.name);
                         p.isIt = false;
+                        p.isAlive = false;
                         //Adjust scoreobard
                         for (Player v : players.values()) {
-                            if(!v.name.equals(p.name)){
+                            if(!v.name.equals(p.name) && v.isAlive){
                                     v.score++;
                             }
                         }
@@ -180,10 +183,14 @@ public class mainMenu implements ActionListener{
                 System.out.println(loser + " went BOOM!");
                 roundsPlayed += 1;
                 graceTimer = 5;
+                
+                if (players.containsKey(loser)){
+                    players.get(loser).isAlive = false;
+                    players.get(loser).isIt = false;
+                }
                 //Adjust scoreobard
                 for (Player p : players.values()) {
-                    p.isIt = false;
-                    if (!p.name.equals(loser)) {
+                    if (!p.name.equals(loser) && p.isAlive) {
                         p.score++;
                         System.out.println("Client side - added 1 to " + p);
                     }
@@ -200,6 +207,10 @@ public class mainMenu implements ActionListener{
                 if (graceTimer <= 0){
                     gracePeriod = false;
                 }
+            }
+
+            if (msg.startsWith("GAMEOVER:")){
+                endGame();  
             }
 
             if (msg.startsWith("CHATUSER")){
@@ -435,6 +446,9 @@ public class mainMenu implements ActionListener{
         instructionsText.setWrapStyleWord(true);
         instructionsText.setFont(new Font("Arial", Font.PLAIN, 22));
 
+        // game over panel
+
+
         instructionsText.setText(
             "GAMEPLAY:\n\n" +
             "This is a real-time multiplayer TAG game. One player is 'IT'. " +
@@ -551,6 +565,28 @@ public class mainMenu implements ActionListener{
         }
     }
 
+    private class endPanel extends JPanel{
+
+        public endPanel(){
+            this.setPreferredSize(new Dimension(1280,720));
+            this.setLayout(null);
+        }
+
+        @Override
+        public void paintComponent(Graphics g){
+            super.paintComponent(g);
+        
+            g.setColor(new Color(0, 0, 0, 220));
+                g.fillRect(0, 0, 1280, 720);
+                g.setColor(Color.YELLOW);
+                g.setFont(new Font("Arial", Font.BOLD, 60));
+                String winText = "GAME OVER! WINNER: ";
+                int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
+                g.drawString(winText, x, 360);
+            
+        }
+    }
+
     private class GamePanel extends JPanel {
 
         public GamePanel() {
@@ -594,6 +630,7 @@ public class mainMenu implements ActionListener{
                 }
             }
             for (Player p : players.values()) {
+                if(!p.isAlive) continue;
                 p.draw(g);
             }
             if(gameActive && gracePeriod){
@@ -622,6 +659,7 @@ public class mainMenu implements ActionListener{
         String name;
         int score = 0;
         boolean isIt = false;
+        boolean isAlive = true;
 
         public Player(int x, int y, Color color, String name) {
             this.x = x; this.y = y; this.color = color; this.name = name;
@@ -654,6 +692,7 @@ public class mainMenu implements ActionListener{
     private void handleMovement() {
         if (!gameActive) return;
         if (localPlayer == null) return;
+         if (!localPlayer.isAlive) return;
         if (gracePeriod) return;
 
         int speed = 5;
@@ -714,9 +753,11 @@ public class mainMenu implements ActionListener{
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
+        if (!localPlayer.isAlive) return;
 
         for (Player other : players.values()) {
             if (other == localPlayer) continue;
+             if (!other.isAlive) continue;
 
             // Rectangle Collision
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
@@ -747,19 +788,37 @@ public class mainMenu implements ActionListener{
         ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
     }
 
+    private void endGame(){
+        bombCountdown.stop();
+        graceCountdown.stop();
+        gameActive = false;
+        gracePeriod = false;
+        frame.setContentPane(endPanel);
+        frame.revalidate();
+        frame.repaint();
+    }
+
     // Picks random player to be IT
     //
     public void pickRandomIt() {
         if (players.isEmpty()) return;
-        Object[] names = players.keySet().toArray();
-        int randomIndex = (int)(Math.random() * names.length);
-        String randomPlayer = (String)names[randomIndex];
-
-        if (ssm != null) {
-            ssm.sendText("TAGGED:" + randomPlayer);
+        java.util.List<String> survivors = new java.util.ArrayList<>();
+        for (Player p : players.values()) {
+            if (p.isAlive) survivors.add(p.name);
         }
-        players.get(randomPlayer).isIt = true;
-    }
+        if (survivors.size() > 1) {
+            String newIt = survivors.get((int)(Math.random() * survivors.size()));
+            if (ssm != null) {
+                ssm.sendText("TAGGED:" + newIt);
+            }
+            players.get(newIt).isIt = true;
+        }else if (survivors.size() == 1){
+            String winner = survivors.get(0);
+            ssm.sendText("GAMEOVER:" + winner);
+            gameOver = true;
+            endGame();
+        }
+        }
     public static void main(String[] args) {
         new mainMenu();
     }
