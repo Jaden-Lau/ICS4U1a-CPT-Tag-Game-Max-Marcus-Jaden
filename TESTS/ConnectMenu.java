@@ -26,8 +26,7 @@ public class ConnectMenu extends JFrame {
 
         JTextField usernameField = new JTextField("Enter Username");
         JTextField ipField = new JTextField("Enter IP Address");
-        JComboBox<String> modeChooser =
-                new JComboBox<>(new String[]{"Client", "Server"});
+        JComboBox<String> modeChooser = new JComboBox<>(new String[]{"Client", "Server"});
 
         // Player color selection
         Color[] playerColors = {
