@@ -43,6 +43,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
     JButton leftColorButton = createArrowButton("<");
     JButton connectBackBtn = createMenuButton("BACK");
     JButton connectBtn = createMenuButton("CONNECT");
+    
     JComboBox<String> modeChooser = new JComboBox<>(new String[]{"Client", "Server"});
     JTextField IPAdressField = new JTextField("Enter IP Address");
     JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
@@ -833,6 +834,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 waitingLabel.setVisible(true);
                 connectBtn.setVisible(false);
                 connectBackBtn.setVisible(false);
+                connectBtn.addActionListener(this);
             }
         }
     }
