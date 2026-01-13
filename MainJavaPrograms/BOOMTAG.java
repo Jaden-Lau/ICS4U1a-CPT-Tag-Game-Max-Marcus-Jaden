@@ -166,6 +166,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
         center.add(Box.createVerticalStrut(1));
         center.add(connectBackBtn);
         connectPanel.add(header, BorderLayout.NORTH);
+        connectBtn.addActionListener(this);
+        connectBackBtn.addActionListener(this);
         
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
@@ -183,7 +185,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 IPAdressField.setText("Enter IP Address");
             }
         });
-
+        connectBtn.addActionListener(this);
         connectBackBtn.addActionListener(e -> dispose());
     }
 
@@ -227,6 +229,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         container.add(SPCtextPanel1);
         container.add(Box.createVerticalStrut(10));
         container.add(row);
+
 
         return container;
     }
