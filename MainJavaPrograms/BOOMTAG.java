@@ -68,6 +68,10 @@ public class BOOMTAG extends JFrame implements ActionListener {
     JPanel mapSelectPanel = new JPanel();
     JButton map1Btn = new JButton("Map 1");
     JButton map2Btn = new JButton("Map 2");
+
+    private static final int MAX_PLAYERS = 4;
+    private int currentPlayers = 1;
+    private JLabel lobbyCountLabel;
     
     // Game
     GamePanel gamePanel = new GamePanel();
@@ -358,6 +362,14 @@ public class BOOMTAG extends JFrame implements ActionListener {
         mapLabel.setBounds(0, 50, WIDTH, 100);
         mapSelectPanel.add(mapLabel);
 
+        lobbyCountLabel = new JLabel("", SwingConstants.CENTER);
+        lobbyCountLabel.setForeground(new Color(180, 180, 180));
+        lobbyCountLabel.setFont(new Font("Arial", Font.BOLD, 26));
+        lobbyCountLabel.setBounds(0, 140, WIDTH, 40);
+
+        updateLobbyLabel();
+        mapSelectPanel.add(lobbyCountLabel);
+
         map1Btn.setBounds(300, 250, 300, 300);
         map1Btn.setFont(mainFont);
         map1Btn.addActionListener(this);
@@ -367,6 +379,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
         map2Btn.setFont(mainFont);
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
+    }
+    private void updateLobbyLabel() {
+        lobbyCountLabel.setText(currentPlayers + " / " + MAX_PLAYERS);
     }
 
     private void setupGameLayer() {
@@ -822,9 +837,17 @@ public class BOOMTAG extends JFrame implements ActionListener {
             chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
         }
 
+        else if (msg.startsWith("LOBBY:")) {
+            currentPlayers = Integer.parseInt(msg.substring(6));
+            updateLobbyLabel();
+        }
+
         
         // Server: Client joined
         if (modeChooser.getSelectedItem().equals("Server") && msg.equals("JOIN")) {
+            currentPlayers++;
+            ssm.sendText("LOBBY:" + currentPlayers);
+            updateLobbyLabel();
             cardLayout.show(mainContainer, "MAP_SELECT");
         } 
         // Client: Server selected map
@@ -838,6 +861,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void handleConnection() {
         if (modeChooser.getSelectedItem().equals("Server")) {
             ssm = new SuperSocketMaster(1234, this);
+            currentPlayers = 1;
+            updateLobbyLabel();
             if (ssm.connect()) {
                 cardLayout.show(mainContainer, "CONNECT");
                 waitingLabel.setVisible(true);
