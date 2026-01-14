@@ -7,7 +7,18 @@ import java.io.*;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-//CHANGE ALL ConnectTesting to BOOMTAG to implement to main file
+
+/*
+ * Program Name: BOOM TAG
+ * Course: ICS4U
+ * Authors: Jaden, Marcus, Max
+ * Date: January 20, 2026
+ * Description:
+ * A real-time multiplayer tag game built in Java using Swing for graphics
+ * and SuperSocketMaster for networking. Players connect over a network,
+ * select a map, and compete in a fast-paced tag-style game.
+ */
+
 public class BOOMTAG extends JFrame implements ActionListener {
 
     // Screen Properties
