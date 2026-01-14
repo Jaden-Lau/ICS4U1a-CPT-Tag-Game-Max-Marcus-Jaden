@@ -1,4 +1,4 @@
-package TESTS;
+package MainJavaPrograms;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -8,7 +8,18 @@ import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class boomtagtest extends JFrame implements ActionListener {
+/*
+ * Program Name: BOOM TAG
+ * Course: ICS4U
+ * Authors: Jaden, Marcus, Max
+ * Date: January 20, 2026
+ * Description:
+ * A real-time multiplayer tag game built in Java using Swing for graphics
+ * and SuperSocketMaster for networking. Players connect over a network,
+ * select a map, and compete in a fast-paced tag-style game.
+ */
+
+public class BOOMTAG extends JFrame implements ActionListener {
 
     // Screen Properties
     private static final int WIDTH = 1280;
@@ -39,12 +50,12 @@ public class boomtagtest extends JFrame implements ActionListener {
     JPanel connectPanel = new JPanel();
     JTextField username = new JTextField("Enter Username");
     JLabel SPCtextPanel1 = new JLabel("Select Player Color");
-    JButton rightColorButton = new JButton(">");
-    JButton leftColorButton = new JButton("<");
-    JButton connectBackBtn = new JButton("BACK");
-    JButton connectBtn = new JButton("CONNECT");
-    String[] strcs = {"Client", "Server"};
-    JComboBox<String> csChooser = new JComboBox<>(strcs);
+    JButton rightColorButton = createArrowButton(">");
+    JButton leftColorButton = createArrowButton("<");
+    JButton connectBackBtn = createMenuButton("BACK");
+    JButton connectBtn = createMenuButton("CONNECT");
+    
+    JComboBox<String> modeChooser = new JComboBox<>(new String[]{"Client", "Server"});
     JTextField IPAdressField = new JTextField("Enter IP Address");
     JLabel waitingLabel = new JLabel("WAITING FOR PLAYERS...");
     JPanel colorPreview = new JPanel();
@@ -57,12 +68,11 @@ public class boomtagtest extends JFrame implements ActionListener {
     JPanel mapSelectPanel = new JPanel();
     JButton map1Btn = new JButton("Map 1");
     JButton map2Btn = new JButton("Map 2");
-    // new
+
     private static final int MAX_PLAYERS = 4;
     private int currentPlayers = 1;
     private JLabel lobbyCountLabel;
-    // new
-
+    
     // Game
     GamePanel gamePanel = new GamePanel();
     String[][] mapData = new String[16][16];
@@ -78,7 +88,7 @@ public class boomtagtest extends JFrame implements ActionListener {
     JTextField chatTextField = new JTextField("Type message here...");
 
     // Constructor
-    public boomtagtest() {
+    public BOOMTAG() {
         setTitle("BOOM TAG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(WIDTH, HEIGHT);
@@ -128,62 +138,216 @@ public class boomtagtest extends JFrame implements ActionListener {
     }
 
     private void setupConnectPanel() {
-        connectPanel.setLayout(null);
-        connectPanel.setBackground(Color.BLACK); // Dark Theme
+        
+        connectPanel.setBackground(Color.BLACK);
+        connectPanel.setLayout(new BorderLayout());
 
-        // Left Side
-        username.setBounds(30, 150, 260, 45);
-        username.setFont(new Font("Arial", Font.PLAIN, 18));
-        connectPanel.add(username);
+        // Header
+        JPanel header = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                drawStylizedHeaderC(g, "CONNECT", getWidth() / 2);
+            }
+        };
+        header.setPreferredSize(new Dimension(WIDTH, 220));
+        header.setOpaque(false);
+        add(header, BorderLayout.NORTH);
 
-        SPCtextPanel1.setBounds(30, 210, 260, 30);
-        SPCtextPanel1.setForeground(Color.WHITE);
-        SPCtextPanel1.setFont(new Font("Arial", Font.BOLD, 18));
-        connectPanel.add(SPCtextPanel1);
+        // Username, IP ADDress, Client/Server, Connect/Back
+        JPanel center = new JPanel();
+        center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+        center.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        leftColorButton.setBounds(30, 350, 50, 50);
-        rightColorButton.setBounds(240, 350, 50, 50);
-        leftColorButton.addActionListener(this);
-        rightColorButton.addActionListener(this);
-        connectPanel.add(leftColorButton);
-        connectPanel.add(rightColorButton);
+        styleField(username);
+        styleField(IPAdressField);
+        styleCombo(modeChooser);
 
-        colorPreview.setBounds(100, 325, 100, 100);
-        colorPreview.setBackground(playerColors[currentColorIndex]);
-        connectPanel.add(colorPreview);
+        username.setMaximumSize(new Dimension(420, 45));
+        IPAdressField.setMaximumSize(new Dimension(420, 45));
+        modeChooser.setMaximumSize(new Dimension(420, 45));
 
-        // Right Side
-        JLabel titleLabel = new JLabel("CONNECTION SETUP", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 48));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBounds(350, 40, 850, 100);
-        connectPanel.add(titleLabel);
+        center.add(username);
+        center.add(Box.createVerticalStrut(15));
+        center.add(createColorSelector());
+        center.add(Box.createVerticalStrut(20));
+        center.add(modeChooser);
+        center.add(Box.createVerticalStrut(10));
+        center.add(IPAdressField);
+        center.add(Box.createVerticalStrut(20));
 
-        csChooser.setBounds(450, 200, 650, 60);
-        csChooser.setFont(mainFont);
-        csChooser.addActionListener(this);
-        connectPanel.add(csChooser);
-
-        IPAdressField.setBounds(450, 300, 400, 50);
-        IPAdressField.setFont(new Font("Arial", Font.PLAIN, 20));
-        connectPanel.add(IPAdressField);
-
-        connectBtn.setFont(mainFont);
-        connectBtn.setBounds(450, 400, 650, 80);
+        center.add(connectBtn);
+        center.add(Box.createVerticalStrut(1));
+        center.add(connectBackBtn);
+        connectPanel.add(header, BorderLayout.NORTH);
         connectBtn.addActionListener(this);
-        connectPanel.add(connectBtn);
-
-        connectBackBtn.setFont(mainFont);
-        connectBackBtn.setBounds(450, 520, 650, 70);
         connectBackBtn.addActionListener(this);
-        connectPanel.add(connectBackBtn);
+        
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setOpaque(false);
+        wrapper.add(center);
+
+        connectPanel.add(wrapper, BorderLayout.CENTER);
+        waitingLabel.setForeground(Color.WHITE);
+        waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
+        waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        waitingLabel.setVisible(false);
+
+        connectPanel.add(waitingLabel, BorderLayout.SOUTH);
+        // If client or server is chosen:
+        modeChooser.addActionListener(e -> {
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                IPAdressField.setEnabled(false);
+                IPAdressField.setText("Server mode - no IP needed");
+            } else {
+                IPAdressField.setEnabled(true);
+                IPAdressField.setText("Enter IP Address");
+            }
+        });   
+    }
+
+    // Select colour
+    private JPanel createColorSelector() {
+        JPanel container = new JPanel();
+        container.setOpaque(false);
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        
+        SPCtextPanel1.setFont(new Font("Serif", Font.PLAIN, 20));
+        SPCtextPanel1.setForeground(new Color(180, 180, 180));
+        SPCtextPanel1.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel row = new JPanel();
+        row.setOpaque(false);
+
+        colorPreview.setPreferredSize(new Dimension(80, 80));
+        colorPreview.setBackground(playerColors[currentColorIndex]);
+        colorPreview.setBorder(BorderFactory.createLineBorder(new Color(90, 90, 90)));
+
+        leftColorButton.addActionListener(e -> {
+            currentColorIndex--;
+            if (currentColorIndex < 0)
+                currentColorIndex = playerColors.length - 1;
+            colorPreview.setBackground(playerColors[currentColorIndex]);
+        });
+
+        rightColorButton.addActionListener(e -> {
+            currentColorIndex++;
+            if (currentColorIndex >= playerColors.length)
+                currentColorIndex = 0;
+            colorPreview.setBackground(playerColors[currentColorIndex]);
+        });
+
+        row.add(leftColorButton);
+        row.add(Box.createHorizontalStrut(15));
+        row.add(colorPreview);
+        row.add(Box.createHorizontalStrut(15));
+        row.add(rightColorButton);
+
+        container.add(SPCtextPanel1);
+        container.add(Box.createVerticalStrut(10));
+        container.add(row);
+
+
+        return container;
+    }
+
+    // Component backgrounds
+    private void styleField(JTextField field) {
+        field.setFont(new Font("Serif", Font.PLAIN, 22));
+        field.setForeground(Color.WHITE);
+        field.setBackground(Color.BLACK);
+        field.setCaretColor(Color.WHITE);
+        field.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+    }
+
+    private void styleCombo(JComboBox<String> combo) {
+        combo.setFont(new Font("Serif", Font.PLAIN, 22));
+        combo.setForeground(Color.WHITE);
+        combo.setBackground(Color.BLACK);
+        combo.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+    }
+
+    private JButton createMenuButton(String text) {
+        JButton button = new JButton(text);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setFont(new Font("Serif", Font.PLAIN, 28));
+        button.setForeground(new Color(200, 200, 200));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setText("◈  " + text + "  ◈");
+                button.setForeground(Color.WHITE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setText(text);
+                button.setForeground(new Color(200, 200, 200));
+            }
+        });
+
+        return button;
+    }
+
+    private JButton createArrowButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Serif", Font.PLAIN, 36));
+        btn.setForeground(new Color(200, 200, 200));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setForeground(Color.WHITE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setForeground(new Color(200, 200, 200));
+            }
+        });
+
+        return btn;
+        
+    }
+
+    // Draw header
+    private void drawStylizedHeaderC(Graphics g, String title, int centerX) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g2d.setFont(new Font("Serif", Font.PLAIN, 80));
+        g2d.setColor(Color.WHITE);
+        FontMetrics fm = g2d.getFontMetrics();
+        int titleX = (WIDTH - fm.stringWidth(title)) / 2;
+        g2d.drawString(title, titleX, 150);
+
+        g2d.setStroke(new BasicStroke(2));
+        g2d.setColor(new Color(150, 150, 150));
+        g2d.drawArc(centerX - 100, 70, 200, 40, 0, 180);
+
+        int lineY = 180;
+        g2d.drawLine(centerX - 250, lineY, centerX - 40, lineY);
+        g2d.drawLine(centerX + 40, lineY, centerX + 250, lineY);
+        g2d.drawArc(centerX - 15, lineY - 8, 30, 15, 0, -180);
 
         waitingLabel.setForeground(Color.WHITE);
         waitingLabel.setFont(new Font("Arial", Font.BOLD, 36));
         waitingLabel.setBounds(450, 500, 650, 60);
         waitingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         waitingLabel.setVisible(false);
-        connectPanel.add(waitingLabel);
+        
+
     }
 
     private void setupMapSelectPanel() {
@@ -195,7 +359,7 @@ public class boomtagtest extends JFrame implements ActionListener {
         mapLabel.setFont(new Font("Serif", Font.BOLD, 48));
         mapLabel.setBounds(0, 50, WIDTH, 100);
         mapSelectPanel.add(mapLabel);
-        // new
+
         lobbyCountLabel = new JLabel("", SwingConstants.CENTER);
         lobbyCountLabel.setForeground(new Color(180, 180, 180));
         lobbyCountLabel.setFont(new Font("Arial", Font.BOLD, 26));
@@ -203,7 +367,7 @@ public class boomtagtest extends JFrame implements ActionListener {
 
         updateLobbyLabel();
         mapSelectPanel.add(lobbyCountLabel);
-        // new
+
         map1Btn.setBounds(300, 250, 300, 300);
         map1Btn.setFont(mainFont);
         map1Btn.addActionListener(this);
@@ -214,12 +378,9 @@ public class boomtagtest extends JFrame implements ActionListener {
         map2Btn.addActionListener(this);
         mapSelectPanel.add(map2Btn);
     }
-    // new
     private void updateLobbyLabel() {
         lobbyCountLabel.setText(currentPlayers + " / " + MAX_PLAYERS);
     }
-    //new
-
 
     private void setupGameLayer() {
         // Game Panel
@@ -526,7 +687,7 @@ public class boomtagtest extends JFrame implements ActionListener {
         } 
         
         // Bomb Logic (Server)
-        else if(evt.getSource() == bombCountdown && csChooser.getSelectedItem().equals("Server")){
+        else if(evt.getSource() == bombCountdown && modeChooser.getSelectedItem().equals("Server")){
                 bombTimer--;
                 ssm.sendText("TIME:" + bombTimer); 
             if (bombTimer <= 0) {
@@ -551,7 +712,7 @@ public class boomtagtest extends JFrame implements ActionListener {
                 }
                 pickRandomIt();
             }
-        }else if(evt.getSource() == graceCountdown && csChooser.getSelectedItem().equals("Server")){
+        }else if(evt.getSource() == graceCountdown && modeChooser.getSelectedItem().equals("Server")){
             graceTimer--;
             ssm.sendText("GRACETIME:" + graceTimer);
             if (graceTimer < 0){
@@ -560,6 +721,7 @@ public class boomtagtest extends JFrame implements ActionListener {
                 gracePeriod = false;
                 bombTimer = 15; 
                 bombCountdown.start();    //THIS STARTS BOMB TIMER
+                pickRandomIt();
             }
         }
 
@@ -583,8 +745,8 @@ public class boomtagtest extends JFrame implements ActionListener {
             if (currentColorIndex < 0) currentColorIndex = playerColors.length - 1;
             colorPreview.setBackground(playerColors[currentColorIndex]);
         }
-        else if (evt.getSource() == csChooser) {
-            if (csChooser.getSelectedItem().equals("Server")) {
+        else if (evt.getSource() == modeChooser) {
+            if (modeChooser.getSelectedItem().equals("Server")) {
                 IPAdressField.setEnabled(false);
                 IPAdressField.setText("Server Mode");
             } else {
@@ -624,8 +786,6 @@ public class boomtagtest extends JFrame implements ActionListener {
             if (players.containsKey(user)) {
                 players.get(user).x = newX;
                 players.get(user).y = newY;
-            } else {
-                players.put(user, new Player(newX, newY, Color.GRAY, user));
             }
         }
         else if (msg.startsWith("TAGGED:")) {
@@ -658,42 +818,38 @@ public class boomtagtest extends JFrame implements ActionListener {
         }
 
         if (msg.startsWith("GRACETIME:")) {
-            graceTimer = Integer.parseInt(msg.substring(10));
-            gracePeriod = true;
-            if (graceTimer <= 0){
-                gracePeriod = false;
+                graceTimer = Integer.parseInt(msg.substring(10));
+                gracePeriod = true;
+                if (graceTimer <= 0){
+                    gracePeriod = false;
+                }
             }
-        }
 
-        if (msg.startsWith("GAMEOVER:")){
-            winnerName = msg.substring(9);
-            endGame();  
-        }
+            if (msg.startsWith("GAMEOVER:")){
+                winnerName = msg.substring(9);
+                endGame();  
+            }
         
         else if (msg.startsWith("CHAT:")) {
             String[] parts = msg.split(":", 3);
             chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
         }
-        // new
+
         else if (msg.startsWith("LOBBY:")) {
             currentPlayers = Integer.parseInt(msg.substring(6));
             updateLobbyLabel();
         }
-        // new
-
 
         
         // Server: Client joined
-        if (csChooser.getSelectedItem().equals("Server") && msg.equals("JOIN")) {
-            // new
+        if (modeChooser.getSelectedItem().equals("Server") && msg.equals("JOIN")) {
             currentPlayers++;
             ssm.sendText("LOBBY:" + currentPlayers);
             updateLobbyLabel();
-            // new
             cardLayout.show(mainContainer, "MAP_SELECT");
         } 
         // Client: Server selected map
-        else if (!csChooser.getSelectedItem().equals("Server") && (msg.equals("MAP:1") || msg.equals("MAP:2"))) {
+        else if (!modeChooser.getSelectedItem().equals("Server") && (msg.equals("MAP:1") || msg.equals("MAP:2"))) {
             String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
             loadMap(mapFile);
             startGameSession();
@@ -701,16 +857,13 @@ public class boomtagtest extends JFrame implements ActionListener {
     }
 
     private void handleConnection() {
-        if (csChooser.getSelectedItem().equals("Server")) {
+        if (modeChooser.getSelectedItem().equals("Server")) {
             ssm = new SuperSocketMaster(1234, this);
-            currentPlayers = 1; // new
-            updateLobbyLabel(); // new
-
+            currentPlayers = 1;
+            updateLobbyLabel();
             if (ssm.connect()) {
+                cardLayout.show(mainContainer, "CONNECT");
                 waitingLabel.setVisible(true);
-                connectBtn.setVisible(false);
-                connectBackBtn.setVisible(false);
-                csChooser.setEnabled(false);
             }
         } else {
             String ip = IPAdressField.getText();
@@ -721,6 +874,7 @@ public class boomtagtest extends JFrame implements ActionListener {
                 waitingLabel.setVisible(true);
                 connectBtn.setVisible(false);
                 connectBackBtn.setVisible(false);
+                
             }
         }
     }
@@ -729,9 +883,6 @@ public class boomtagtest extends JFrame implements ActionListener {
         loadMap(mapFile);
         if (ssm != null) ssm.sendText(mapFile.equals("map1.csv") ? "MAP:1" : "MAP:2");
         startGameSession();
-        if (csChooser.getSelectedItem().equals("Server")) {
-            pickRandomIt();
-        }
     }
 
     private void startGameSession() {
@@ -745,8 +896,7 @@ public class boomtagtest extends JFrame implements ActionListener {
             cardLayout.show(mainContainer, "GAME");
             this.requestFocusInWindow();
 
-            if (csChooser.getSelectedItem().equals("Server")) {
-                pickRandomIt();
+            if (modeChooser.getSelectedItem().equals("Server")) {
                 graceCountdown.stop();
                 graceTimer = 5;
                 gracePeriod = true;
@@ -846,13 +996,33 @@ public class boomtagtest extends JFrame implements ActionListener {
                 }
                 
                 // Knockback
-                if (localPlayer.x < other.x) localPlayer.x -= 50;
-                else localPlayer.x += 50;
-                
+                // new
+                int direction = localPlayer.x < other.x ? -1 : 1;
+                applyKnockback(localPlayer, direction, 50);
+
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+                // new
+
             }
         }
     }
+
+    // new
+    private void applyKnockback(Player p, int dx, int distance) {
+        int step = dx > 0 ? 1 : -1;
+
+        for (int i = 0; i < distance; i++) {
+            int nextX = p.x + step;
+
+            if (isSolid(nextX, p.y) || isSolid(nextX + p.width - 1, p.y + p.height - 1)) {
+                break;
+            }
+
+            p.x = nextX;
+        }
+    }
+    // new
+
 
     private void endGame(){
         bombCountdown.stop();
@@ -865,7 +1035,9 @@ public class boomtagtest extends JFrame implements ActionListener {
     }
 
     public void pickRandomIt() {
+        if (!modeChooser.getSelectedItem().equals("Server")) return;
         if (players.isEmpty()) return;
+        if (players.size() < 2) return;
         if (gameOver) return;
         java.util.List<String> survivors = new java.util.ArrayList<>();
         for (Player p : players.values()) {
@@ -878,12 +1050,12 @@ public class boomtagtest extends JFrame implements ActionListener {
             }
             players.get(newIt).isIt = true;
         }else if (survivors.size() == 1){
-            String winner = survivors.get(0);
-            ssm.sendText("GAMEOVER:" + winner);
+            winnerName = survivors.get(0);
+            ssm.sendText("GAMEOVER:" + winnerName);
             gameOver = true;
             endGame();
         }
-        }
+    }
 
     // Class
     class Player {
@@ -1005,6 +1177,6 @@ public class boomtagtest extends JFrame implements ActionListener {
     }
 
     public static void main(String[] args) {
-        new boomtagtest();
+        new BOOMTAG();
     }
 }
