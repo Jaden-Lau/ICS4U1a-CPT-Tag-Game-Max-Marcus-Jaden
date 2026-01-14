@@ -998,7 +998,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 // Knockback
                 // new
                 int direction = localPlayer.x < other.x ? -1 : 1;
-                applyKnockback(localPlayer, direction, 50);
+                applyKnockbackWithBounce(localPlayer, direction, 50);
+
 
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
                 // new
@@ -1008,19 +1009,30 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     // new
-    private void applyKnockback(Player p, int dx, int distance) {
-        int step = dx > 0 ? 1 : -1;
+    private void applyKnockbackWithBounce(Player p, int direction, int force) {
+        int dx = direction;
+        int remaining = force;
 
-        for (int i = 0; i < distance; i++) {
-            int nextX = p.x + step;
+        while (remaining > 0) {
+            int nextX = p.x + dx;
 
-            if (isSolid(nextX, p.y) || isSolid(nextX + p.width - 1, p.y + p.height - 1)) {
-                break;
+            boolean hitWall =
+                isSolid(nextX, p.y) ||
+                isSolid(nextX + p.width - 1, p.y) ||
+                isSolid(nextX, p.y + p.height - 1) ||
+                isSolid(nextX + p.width - 1, p.y + p.height - 1);
+
+            if (hitWall) {
+                dx *= -1;
+                remaining /= 2;
+                continue;
             }
 
             p.x = nextX;
+            remaining--;
         }
     }
+
     // new
 
 
