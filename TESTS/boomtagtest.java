@@ -996,45 +996,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 }
                 
                 // Knockback
-                // new
-                int direction = localPlayer.x < other.x ? -1 : 1;
-                applyKnockbackWithBounce(localPlayer, direction, 50);
-
-
+                if (localPlayer.x < other.x) localPlayer.x -= 50;
+                else localPlayer.x += 50;
+                
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
-                // new
-
             }
         }
     }
-
-    // new
-    private void applyKnockbackWithBounce(Player p, int direction, int force) {
-        int dx = direction;
-        int remaining = force;
-
-        while (remaining > 0) {
-            int nextX = p.x + dx;
-
-            boolean hitWall =
-                isSolid(nextX, p.y) ||
-                isSolid(nextX + p.width - 1, p.y) ||
-                isSolid(nextX, p.y + p.height - 1) ||
-                isSolid(nextX + p.width - 1, p.y + p.height - 1);
-
-            if (hitWall) {
-                dx *= -1;
-                remaining /= 2;
-                continue;
-            }
-
-            p.x = nextX;
-            remaining--;
-        }
-    }
-
-    // new
-
 
     private void endGame(){
         bombCountdown.stop();
@@ -1067,7 +1035,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             gameOver = true;
             endGame();
         }
-    }
+        }
 
     // Class
     class Player {
