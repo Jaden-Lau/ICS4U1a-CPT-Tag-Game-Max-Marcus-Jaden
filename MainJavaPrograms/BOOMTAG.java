@@ -204,9 +204,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 IPAdressField.setEnabled(true);
                 IPAdressField.setText("Enter IP Address");
             }
-        });
-        
-        connectBackBtn.addActionListener(e -> dispose());
+        });   
     }
 
     // Select colour
