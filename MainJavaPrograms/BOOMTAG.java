@@ -888,7 +888,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void startGameSession() {
         SwingUtilities.invokeLater(() -> {
             myUsername = username.getText();
-            localPlayer = new Player((int)(Math.random() * 1101) + 100, 50, playerColors[currentColorIndex], myUsername);
+            localPlayer = new Player(0, 50, playerColors[currentColorIndex], myUsername);
             players.put(myUsername, localPlayer);
             gameActive = true;
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
@@ -1074,25 +1074,64 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
     private class endPanel extends JPanel{
 
-        public endPanel(){
-            this.setPreferredSize(new Dimension(1280,720));
-            this.setLayout(null);
-        }
+    public endPanel(){
+        this.setPreferredSize(new Dimension(1280,720));
+        this.setLayout(null);
 
-        @Override
-        public void paintComponent(Graphics g){
-            super.paintComponent(g);
-        
-            g.setColor(new Color(0, 0, 0, 220));
-                g.fillRect(0, 0, 1280, 720);
-                g.setColor(Color.YELLOW);
-                g.setFont(new Font("Arial", Font.BOLD, 60));
-                String winText = "GAME OVER! WINNER: " + winnerName;
-                int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
-                g.drawString(winText, x, 360);
+        JButton connectBtn = new JButton("Return to Main Menu");
+        connectBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        connectBtn.setFont(new Font("Serif", Font.PLAIN, 28));
+        connectBtn.setForeground(new Color(200, 200, 200));
+        connectBtn.setFocusPainted(false);
+        connectBtn.setContentAreaFilled(false);
+        connectBtn.setBorderPainted(false);
+        connectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        connectBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                connectBtn.setText("◈  " + "Return to Main Menu" + "  ◈");
+                connectBtn.setForeground(Color.WHITE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                connectBtn.setText("Return to Main Menu");
+                connectBtn.setForeground(new Color(200, 200, 200));
+            }
             
-        }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Reset game state and return to menu
+                gameActive = false;
+                gameOver = false;
+                gracePeriod = false;
+                players.clear();
+                cardLayout.show(mainContainer, "MENU");
+                setContentPane(mainContainer);
+                revalidate();
+                repaint();
+            }
+        });
+        
+        connectBtn.setBounds(440, 500, 400, 50); // Set bounds since you're using null layout
+        
+        this.add(connectBtn); // Changed from endPanel.add(connectBtn)
     }
+
+    @Override
+    public void paintComponent(Graphics g){
+        super.paintComponent(g);
+    
+        g.setColor(new Color(0, 0, 0, 220));
+        g.fillRect(0, 0, 1280, 720);
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 60));
+        String winText = "GAME OVER! WINNER: " + winnerName;
+        int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
+        g.drawString(winText, x, 360);
+    }
+}
 
     private class GamePanel extends JPanel {
         @Override
