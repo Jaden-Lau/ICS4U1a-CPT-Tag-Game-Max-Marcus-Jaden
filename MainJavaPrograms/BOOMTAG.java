@@ -775,7 +775,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             String[] data = msg.substring(7).split(",");
             String user = data[0];
             int colorIdx = Integer.parseInt(data[1]);
-            players.put(user, new Player(100, 100, playerColors[colorIdx], user));
+            players.put(user, new Player((int)(Math.random() * 1101) + 100, 100, playerColors[colorIdx], user));
         }
         else if (msg.startsWith("POS:")) {
             String[] data = msg.substring(4).split(",");
@@ -888,7 +888,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void startGameSession() {
         SwingUtilities.invokeLater(() -> {
             myUsername = username.getText();
-            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+            localPlayer = new Player((int)(Math.random() * 1101) + 100, 100, playerColors[currentColorIndex], myUsername);
             players.put(myUsername, localPlayer);
             gameActive = true;
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
