@@ -1,4 +1,4 @@
-package MainJavaPrograms;
+package TESTS;
 
 import java.awt.*;
 import java.awt.event.*;
