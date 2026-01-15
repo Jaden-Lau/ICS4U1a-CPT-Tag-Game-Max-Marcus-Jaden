@@ -52,6 +52,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     double knockbackVelocityY = 0;
     final double KNOCKBACK_FRICTION = 0.85;
     final double KNOCKBACK_THRESHOLD = 0.5;
+    
+    // Track used spawn points
+    java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
 
     // Connect Panel
     JPanel connectPanel = new JPanel();
@@ -941,25 +944,29 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
         // Handle knockback physics
         if (isKnockedBack) {
+            // Apply knockback velocity
             int nextX = (int)(localPlayer.x + knockbackVelocityX);
             int nextY = (int)(localPlayer.y + knockbackVelocityY);
             
+            // Check horizontal collision
             if (!isSolid(nextX, localPlayer.y) && !isSolid(nextX + 39, localPlayer.y + 39)) {
                 localPlayer.x = nextX;
             } else {
-                knockbackVelocityX = 0;
+                knockbackVelocityX = 0; // Stop horizontal knockback on wall hit
             }
             
             // Check vertical collision
             if (!isSolid(localPlayer.x, nextY) && !isSolid(localPlayer.x + 39, nextY + 39)) {
                 localPlayer.y = nextY;
             } else {
-                knockbackVelocityY = 0; 
+                knockbackVelocityY = 0; // Stop vertical knockback on wall/ground hit
             }
             
+            // Apply friction and gravity to knockback
             knockbackVelocityX *= KNOCKBACK_FRICTION;
-            knockbackVelocityY += 0.5;
+            knockbackVelocityY += 0.5; // Gravity during knockback
             
+            // Check if knockback should end
             if (Math.abs(knockbackVelocityX) < KNOCKBACK_THRESHOLD && 
                 Math.abs(knockbackVelocityY) < KNOCKBACK_THRESHOLD) {
                 isKnockedBack = false;
@@ -971,7 +978,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             if (ssm != null) {
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
             }
-            return; 
+            return; // Skip normal movement during knockback
         }
 
         // Normal movement (when not knocked back)
@@ -1023,15 +1030,24 @@ public class BOOMTAG extends JFrame implements ActionListener {
         return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
     }
     
+    // Find a safe spawn location that's not inside a wall
     private int findSafeSpawnX() {
-        int[] possibleSpawns = {200, 400, 600, 800, 1000, 300, 500, 700, 900, 100};
+        // Try to find a safe spawn point by checking multiple positions
+        int[] possibleSpawns = {200, 400, 600, 800, 1000, 300, 500, 700, 900, 100, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1050};
         
         for (int x : possibleSpawns) {
+            // Skip if this spawn point is already used
+            if (usedSpawnPoints.contains(x)) {
+                continue;
+            }
+            
+            // Check if this position is safe (not solid and has ground below)
             boolean topLeftClear = !isSolid(x, 50);
             boolean topRightClear = !isSolid(x + 39, 50);
             boolean bottomLeftClear = !isSolid(x, 89);
             boolean bottomRightClear = !isSolid(x + 39, 89);
             
+            // Check if there's ground below (within reasonable distance)
             boolean hasGroundBelow = false;
             for (int checkY = 90; checkY < 700; checkY += 45) {
                 if (isSolid(x, checkY) || isSolid(x + 39, checkY)) {
@@ -1040,19 +1056,30 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 }
             }
             
+            // If all corners are clear and there's ground below, this is a safe spawn
             if (topLeftClear && topRightClear && bottomLeftClear && bottomRightClear && hasGroundBelow) {
+                usedSpawnPoints.add(x); // Mark this spawn point as used
                 return x;
             }
         }
         
-        return 640; 
+        // If no safe spawn found, find any unused position from the list
+        for (int x : possibleSpawns) {
+            if (!usedSpawnPoints.contains(x)) {
+                usedSpawnPoints.add(x);
+                return x;
+            }
+        }
+        
+        // Absolute fallback - return center of screen
+        return 640;
     }
     
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
         if (!localPlayer.isAlive) return;
-        if (isKnockedBack) return;
+        if (isKnockedBack) return; // Don't check collisions during knockback
 
         for (Player other : players.values()) {
             if (other == localPlayer) continue;
@@ -1068,19 +1095,21 @@ public class BOOMTAG extends JFrame implements ActionListener {
                     players.get(other.name).isIt = true;
                 }
                 
+                // Calculate knockback direction
                 double dx = localPlayer.x - other.x;
                 double dy = localPlayer.y - other.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
+                // Normalize and apply knockback force
                 if (distance > 0) {
                     double knockbackForce = 12.0;
                     knockbackVelocityX = (dx / distance) * knockbackForce;
-                    knockbackVelocityY = -8.0;
+                    knockbackVelocityY = -8.0; // Upward knockback
                     isKnockedBack = true;
                 }
                 
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
-                break; 
+                break; // Only tag one player at a time
             }
         }
     }
@@ -1090,6 +1119,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         graceCountdown.stop();
         gameActive = false;
         gracePeriod = false;
+        usedSpawnPoints.clear(); // Clear spawn points for next game
         this.setContentPane(endPanel);
         this.revalidate();
         this.repaint();
@@ -1190,6 +1220,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 isKnockedBack = false;
                 knockbackVelocityX = 0;
                 knockbackVelocityY = 0;
+                usedSpawnPoints.clear(); // Clear spawn points when returning to menu
                 players.clear();
                 cardLayout.show(mainContainer, "MENU");
                 setContentPane(mainContainer);
@@ -1198,9 +1229,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
             }
         });
         
-        connectBtn.setBounds(440, 500, 400, 50); 
+        connectBtn.setBounds(440, 500, 400, 50); // Set bounds since you're using null layout
         
-        this.add(connectBtn); 
+        this.add(connectBtn); // Changed from endPanel.add(connectBtn)
     }
 
     @Override
