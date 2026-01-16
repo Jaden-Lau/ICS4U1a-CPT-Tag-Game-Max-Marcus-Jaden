@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -54,7 +53,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
     final double KNOCKBACK_FRICTION = 0.85;
     final double KNOCKBACK_THRESHOLD = 0.5;
     
-    ArrayList<Point> spawnPoints = new ArrayList<>();
+    // Track used spawn points
+    java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
 
     // Connect Panel
     JPanel connectPanel = new JPanel();
@@ -781,32 +781,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
     // Logics
     private void handleNetworkMessage(String msg) {
-        if (msg.startsWith("JOINED:") && modeChooser.getSelectedItem().equals("Server")) {
+        if (msg.startsWith("JOINED:")) {
             String[] data = msg.substring(7).split(",");
             String user = data[0];
             int colorIdx = Integer.parseInt(data[1]);
-            
-            Point spawn = getSpawnPoint();
-            Player p = new Player(spawn.x, spawn.y, playerColors[colorIdx], user);
-            players.put(user, p);
-            
-            // Broadcast spawn info to all clients
-            ssm.sendText("SPAWN:" + user + "," + spawn.x + "," + spawn.y + "," + colorIdx);
-        }
-        else if (msg.startsWith("SPAWN:")) {
-            String[] data = msg.substring(6).split(",");
-            String user = data[0];
-            int x = Integer.parseInt(data[1]);
-            int y = Integer.parseInt(data[2]);
-            int colorIdx = Integer.parseInt(data[3]);
-
-            Player p = new Player(x, y, playerColors[colorIdx], user);
-            players.put(user, p);
-
-            // Set localPlayer if this is our player
-            if (user.equals(myUsername)) {
-                localPlayer = p;
-            }
+            // Find a safe spawn point
+            int spawnX = findSafeSpawnX();
+            players.put(user, new Player(spawnX, 50, playerColors[colorIdx], user));
         }
         else if (msg.startsWith("POS:")) {
             String[] data = msg.substring(4).split(",");
@@ -919,6 +900,10 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void startGameSession() {
         SwingUtilities.invokeLater(() -> {
             myUsername = username.getText();
+            // Find a safe spawn point
+            int spawnX = findSafeSpawnX();
+            localPlayer = new Player(spawnX, 50, playerColors[currentColorIndex], myUsername);
+            players.put(myUsername, localPlayer);
             gameActive = true;
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
             chatPanel.setVisible(true);
@@ -935,8 +920,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     private void loadMap(String fileName) {
-        spawnPoints.clear(); // Clear previous spawn points
-        
         File mapFile = new File("MAPS/" + fileName);
         try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
             String line;
@@ -944,15 +927,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             while ((line = br.readLine()) != null && row < 16) {
                 String[] tiles = line.split(",");
                 for (int col = 0; col < Math.min(tiles.length, 16); col++) {
-                    String tile = tiles[col].trim();
-                    mapData[row][col] = tile;
-                    
-                    // Extract spawn points from "sp" tiles
-                    if (tile.equals("sp")) {
-                        int x = col * 80;
-                        int y = (row * 45) - 40 - 5;
-                        spawnPoints.add(new Point(x, y));
-                    }
+                    mapData[row][col] = tiles[col].trim();
                 }
                 row++;
             }
@@ -961,24 +936,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         }
     }
 
-    private Point getSpawnPoint() {
-        java.util.Collections.shuffle(spawnPoints);
-
-        for (Point p : spawnPoints) {
-            boolean used = false;
-            // Check if any existing player is at this spawn point
-            for (Player pl : players.values()) {
-                if (pl.x == p.x && pl.y == p.y) {
-                    used = true;
-                    break;
-                }
-            }
-            if (!used) return p;
-        }
-
-        // Fallback to first spawn point if all are occupied
-        return spawnPoints.isEmpty() ? new Point(640, 50) : spawnPoints.get(0);
-    }
     private void handleMovement() {
         if (!gameActive) return;
         if (localPlayer == null) return;
@@ -1021,6 +978,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             if (ssm != null) {
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
             }
+            isKnockedBack = false;
             return; // Skip normal movement during knockback
         }
 
@@ -1073,6 +1031,51 @@ public class BOOMTAG extends JFrame implements ActionListener {
         return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
     }
     
+    // Find a safe spawn location that's not inside a wall
+    private int findSafeSpawnX() {
+        // Try to find a safe spawn point by checking multiple positions
+        int[] possibleSpawns = {200, 400, 600, 800, 1000, 300, 500, 700, 900, 100, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1050};
+        
+        for (int x : possibleSpawns) {
+            // Skip if this spawn point is already used
+            if (usedSpawnPoints.contains(x)) {
+                continue;
+            }
+            
+            // Check if this position is safe (not solid and has ground below)
+            boolean topLeftClear = !isSolid(x, 50);
+            boolean topRightClear = !isSolid(x + 39, 50);
+            boolean bottomLeftClear = !isSolid(x, 89);
+            boolean bottomRightClear = !isSolid(x + 39, 89);
+            
+            // Check if there's ground below (within reasonable distance)
+            boolean hasGroundBelow = false;
+            for (int checkY = 90; checkY < 700; checkY += 45) {
+                if (isSolid(x, checkY) || isSolid(x + 39, checkY)) {
+                    hasGroundBelow = true;
+                    break;
+                }
+            }
+            
+            // If all corners are clear and there's ground below, this is a safe spawn
+            if (topLeftClear && topRightClear && bottomLeftClear && bottomRightClear && hasGroundBelow) {
+                usedSpawnPoints.add(x); // Mark this spawn point as used
+                return x;
+            }
+        }
+        
+        // If no safe spawn found, find any unused position from the list
+        for (int x : possibleSpawns) {
+            if (!usedSpawnPoints.contains(x)) {
+                usedSpawnPoints.add(x);
+                return x;
+            }
+        }
+        
+        // Absolute fallback - return center of screen
+        return 640;
+    }
+    
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
@@ -1117,7 +1120,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         graceCountdown.stop();
         gameActive = false;
         gracePeriod = false;
-        spawnPoints.clear(); // Clear spawn points
+        usedSpawnPoints.clear(); // Clear spawn points for next game
         mainContainer.add(endPanel, "END");
         cardLayout.show(mainContainer, "END");
         this.revalidate();
@@ -1230,7 +1233,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 vy = 0;
 
                 players.clear();
-                spawnPoints.clear();
+                usedSpawnPoints.clear();
                 localPlayer = null;
                 winnerName = "";
 
@@ -1276,8 +1279,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
                         
                         if (mapData[r][c].equals("bg") && groundBtm != null) g.drawImage(groundBtm, x, y, 80, 45, null);
                         else if (mapData[r][c].equals("tg") && groundTop != null) g.drawImage(groundTop, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("bs") && skyBtm != null) g.drawImage(skyBtm, x, y, 80, 45, null);
                         else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("sp") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
                     }
                 }
             }
