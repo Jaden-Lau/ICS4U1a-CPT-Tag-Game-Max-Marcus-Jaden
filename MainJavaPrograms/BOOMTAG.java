@@ -1120,7 +1120,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
         gameActive = false;
         gracePeriod = false;
         usedSpawnPoints.clear(); // Clear spawn points for next game
-        this.setContentPane(endPanel);
+        mainContainer.add(endPanel, "END");
+        cardLayout.show(mainContainer, "END");
         this.revalidate();
         this.repaint();
     }
@@ -1214,14 +1215,29 @@ public class BOOMTAG extends JFrame implements ActionListener {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Reset game state and return to menu
+                if (ssm != null) {
+                    ssm.disconnect();
+                    ssm = null;
+                }
+                connectBtn.setVisible(true);
+                connectBackBtn.setVisible(true);
+                waitingLabel.setVisible(false); 
                 gameActive = false;
                 gameOver = false;
                 gracePeriod = false;
                 isKnockedBack = false;
+
                 knockbackVelocityX = 0;
                 knockbackVelocityY = 0;
-                usedSpawnPoints.clear(); // Clear spawn points when returning to menu
+                vy = 0;
+
                 players.clear();
+                usedSpawnPoints.clear();
+                localPlayer = null;
+                winnerName = "";
+
+                bombCountdown.stop();
+                graceCountdown.stop();
                 cardLayout.show(mainContainer, "MENU");
                 setContentPane(mainContainer);
                 revalidate();
