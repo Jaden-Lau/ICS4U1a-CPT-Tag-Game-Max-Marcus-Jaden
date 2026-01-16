@@ -1223,8 +1223,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 knockbackVelocityY = 0;
                 usedSpawnPoints.clear(); // Clear spawn points when returning to menu
                 players.clear();
-                cardLayout.show(mainContainer, "MENU");
+                connectBtn.setVisible(true);
+                connectBackBtn.setVisible(true);
+                waitingLabel.setVisible(false);
+
                 setContentPane(mainContainer);
+                cardLayout.show(mainContainer, "MENU");
+
                 revalidate();
                 repaint();
             }
