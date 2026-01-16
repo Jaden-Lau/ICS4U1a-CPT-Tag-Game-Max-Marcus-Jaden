@@ -937,34 +937,35 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     private void handleMovement() {
-        if (!gameActive) return;
-        if (localPlayer == null) return;
-        if (!localPlayer.isAlive) return;
-        if (gracePeriod) return;
-
         // Handle knockback physics
         if (isKnockedBack) {
             // Apply knockback velocity
-            int nextX = (int)(localPlayer.x + knockbackVelocityX);
-            int nextY = (int)(localPlayer.y + knockbackVelocityY);
+            double nextX = localPlayer.x + knockbackVelocityX;
+            double nextY = localPlayer.y + knockbackVelocityY;
             
             // Check horizontal collision
-            if (!isSolid(nextX, localPlayer.y) && !isSolid(nextX + 39, localPlayer.y + 39)) {
-                localPlayer.x = nextX;
+            if (!isSolid((int)nextX, localPlayer.y) && !isSolid((int)nextX + 39, localPlayer.y + 39)) {
+                localPlayer.x = (int)nextX;
             } else {
                 knockbackVelocityX = 0; // Stop horizontal knockback on wall hit
             }
             
             // Check vertical collision
-            if (!isSolid(localPlayer.x, nextY) && !isSolid(localPlayer.x + 39, nextY + 39)) {
-                localPlayer.y = nextY;
+            if (!isSolid(localPlayer.x, (int)nextY) && !isSolid(localPlayer.x + 39, (int)nextY + 39)) {
+                localPlayer.y = (int)nextY;
             } else {
-                knockbackVelocityY = 0; // Stop vertical knockback on wall/ground hit
+                if (knockbackVelocityY > 0) {
+                    // Hit ground, stop knockback
+                    knockbackVelocityY = 0;
+                } else {
+                    // Hit ceiling
+                    knockbackVelocityY = 0;
+                }
             }
             
             // Apply friction and gravity to knockback
             knockbackVelocityX *= KNOCKBACK_FRICTION;
-            knockbackVelocityY += 0.5; // Gravity during knockback
+            knockbackVelocityY += 0.8; // Gravity during knockback
             
             // Check if knockback should end
             if (Math.abs(knockbackVelocityX) < KNOCKBACK_THRESHOLD && 
@@ -978,7 +979,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             if (ssm != null) {
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
             }
-            isKnockedBack = false;
             return; // Skip normal movement during knockback
         }
 
@@ -1080,7 +1080,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
         if (!localPlayer.isAlive) return;
-        if (isKnockedBack) return; // Don't check collisions during knockback
 
         for (Player other : players.values()) {
             if (other == localPlayer) continue;
@@ -1101,7 +1100,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 double dy = localPlayer.y - other.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Normalize and apply knockback force
+                // Normalize and apply knockback force (only to local player)
                 if (distance > 0) {
                     double knockbackForce = 12.0;
                     knockbackVelocityX = (dx / distance) * knockbackForce;
@@ -1121,8 +1120,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         gameActive = false;
         gracePeriod = false;
         usedSpawnPoints.clear(); // Clear spawn points for next game
-        mainContainer.add(endPanel, "END");
-        cardLayout.show(mainContainer, "END");
+        this.setContentPane(endPanel);
         this.revalidate();
         this.repaint();
     }
@@ -1216,29 +1214,14 @@ public class BOOMTAG extends JFrame implements ActionListener {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Reset game state and return to menu
-                if (ssm != null) {
-                    ssm.disconnect();
-                    ssm = null;
-                }
-                connectBtn.setVisible(true);
-                connectBackBtn.setVisible(true);
-                waitingLabel.setVisible(false); 
                 gameActive = false;
                 gameOver = false;
                 gracePeriod = false;
                 isKnockedBack = false;
-
                 knockbackVelocityX = 0;
                 knockbackVelocityY = 0;
-                vy = 0;
-
+                usedSpawnPoints.clear(); // Clear spawn points when returning to menu
                 players.clear();
-                usedSpawnPoints.clear();
-                localPlayer = null;
-                winnerName = "";
-
-                bombCountdown.stop();
-                graceCountdown.stop();
                 cardLayout.show(mainContainer, "MENU");
                 setContentPane(mainContainer);
                 revalidate();
