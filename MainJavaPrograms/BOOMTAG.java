@@ -954,7 +954,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
                     if (tile.equals("sp")) {
                         int x = col * 80;
-                        int y = row * 45 - 40; 
+                        int y = (row * 45) - 40 - 5;
                         spawnPoints.add(new Point(x, y));
                     }
                 }
@@ -970,7 +970,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (!gameActive) return;
         if (localPlayer == null) return;
         if (!localPlayer.isAlive) return;
-        if (gracePeriod) return;
+
 
         // Handle knockback physics
         if (isKnockedBack) {
@@ -1254,21 +1254,20 @@ public class BOOMTAG extends JFrame implements ActionListener {
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             // Draw Map
-            if (mapData[0][0] != null) {
-                for (int r = 0; r < 16; r++) {
-                    for (int c = 0; c < 16; c++) {
-                        int x = c * 80;
-                        int y = r * 45;
-                        if (mapData[r][c] == null) continue;
-                        
-                        if (mapData[r][c].equals("bg") && groundBtm != null) g.drawImage(groundBtm, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("tg") && groundTop != null) g.drawImage(groundTop, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("bs") && skyBtm != null) g.drawImage(skyBtm, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
-                        else if (mapData[r][c].equals("sp") && groundTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
+            if (mapData[0][0] == null) return;
+                    for (int r = 0; r < 16; r++) {
+                        for (int c = 0; c < 16; c++) {
+                            int x = c * 80;
+                            int y = r * 45;
+                            if (mapData[r][c] == null) continue;
+                            
+                            if (mapData[r][c].equals("bg") && groundBtm != null) g.drawImage(groundBtm, x, y, 80, 45, null);
+                            else if (mapData[r][c].equals("tg") && groundTop != null) g.drawImage(groundTop, x, y, 80, 45, null);
+                            else if (mapData[r][c].equals("bs") && skyBtm != null) g.drawImage(skyBtm, x, y, 80, 45, null);
+                            else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
+                            else if (mapData[r][c].equals("sp") && groundTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
+                        }
                     }
-                }
-            }
             
             // Draw Scoreboard
             if (players.size() > 0) {
