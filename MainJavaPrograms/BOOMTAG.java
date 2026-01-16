@@ -1189,26 +1189,26 @@ public class BOOMTAG extends JFrame implements ActionListener {
         this.setPreferredSize(new Dimension(1280,720));
         this.setLayout(null);
 
-        JButton connectBtn = new JButton("Return to Main Menu");
-        connectBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        connectBtn.setFont(new Font("Serif", Font.PLAIN, 28));
-        connectBtn.setForeground(new Color(200, 200, 200));
-        connectBtn.setFocusPainted(false);
-        connectBtn.setContentAreaFilled(false);
-        connectBtn.setBorderPainted(false);
-        connectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton returnBtn = new JButton("Return to Main Menu");
+        returnBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        returnBtn.setFont(new Font("Serif", Font.PLAIN, 28));
+        returnBtn.setForeground(new Color(200, 200, 200));
+        returnBtn.setFocusPainted(false);
+        returnBtn.setContentAreaFilled(false);
+        returnBtn.setBorderPainted(false);
+        returnBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        connectBtn.addMouseListener(new MouseAdapter() {
+        returnBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                connectBtn.setText("◈  " + "Return to Main Menu" + "  ◈");
-                connectBtn.setForeground(Color.WHITE);
+                returnBtn.setText("◈  " + "Return to Main Menu" + "  ◈");
+                returnBtn.setForeground(Color.WHITE);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                connectBtn.setText("Return to Main Menu");
-                connectBtn.setForeground(new Color(200, 200, 200));
+                returnBtn.setText("Return to Main Menu");
+                returnBtn.setForeground(new Color(200, 200, 200));
             }
             
             @Override
@@ -1229,9 +1229,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
             }
         });
         
-        connectBtn.setBounds(440, 500, 400, 50); // Set bounds since you're using null layout
+        returnBtn.setBounds(440, 500, 400, 50);
         
-        this.add(connectBtn); // Changed from endPanel.add(connectBtn)
+        this.add(returnBtn); 
     }
 
     @Override
