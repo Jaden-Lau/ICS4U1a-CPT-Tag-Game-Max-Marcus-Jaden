@@ -1,4 +1,4 @@
-package MainJavaPrograms;
+package TESTS;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -19,7 +19,7 @@ import javax.swing.*;
  * select a map, and compete in a fast-paced tag-style game.
  */
 
-public class BOOMTAG extends JFrame implements ActionListener {
+public class boomtagtest extends JFrame implements ActionListener {
 
     // Screen Properties
     private static final int WIDTH = 1280;
@@ -45,6 +45,16 @@ public class BOOMTAG extends JFrame implements ActionListener {
     boolean gracePeriod = false;
     boolean gameOver = false;
     int roundsPlayed = 0;
+
+    // Knockback properties
+    boolean isKnockedBack = false;
+    double knockbackVelocityX = 0;
+    double knockbackVelocityY = 0;
+    final double KNOCKBACK_FRICTION = 0.85;
+    final double KNOCKBACK_THRESHOLD = 0.5;
+    
+    // Track used spawn points
+    java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
 
     // Connect Panel
     JPanel connectPanel = new JPanel();
@@ -88,7 +98,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
     JTextField chatTextField = new JTextField("Type message here...");
 
     // Constructor
-    public BOOMTAG() {
+    public boomtagtest() {
         setTitle("BOOM TAG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(WIDTH, HEIGHT);
@@ -775,7 +785,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
             String[] data = msg.substring(7).split(",");
             String user = data[0];
             int colorIdx = Integer.parseInt(data[1]);
-            players.put(user, new Player(100, 100, playerColors[colorIdx], user));
+            // Find a safe spawn point
+            int spawnX = findSafeSpawnX();
+            players.put(user, new Player(spawnX, 50, playerColors[colorIdx], user));
         }
         else if (msg.startsWith("POS:")) {
             String[] data = msg.substring(4).split(",");
@@ -888,7 +900,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void startGameSession() {
         SwingUtilities.invokeLater(() -> {
             myUsername = username.getText();
-            localPlayer = new Player(100, 100, playerColors[currentColorIndex], myUsername);
+            // Find a safe spawn point
+            int spawnX = findSafeSpawnX();
+            localPlayer = new Player(spawnX, 50, playerColors[currentColorIndex], myUsername);
             players.put(myUsername, localPlayer);
             gameActive = true;
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
@@ -925,9 +939,55 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void handleMovement() {
         if (!gameActive) return;
         if (localPlayer == null) return;
-         if (!localPlayer.isAlive) return;
+        if (!localPlayer.isAlive) return;
         if (gracePeriod) return;
 
+        // Handle knockback physics
+        if (isKnockedBack) {
+            // Apply knockback velocity
+            double nextX = localPlayer.x + knockbackVelocityX;
+            double nextY = localPlayer.y + knockbackVelocityY;
+            
+            // Check horizontal collision
+            if (!isSolid((int)nextX, localPlayer.y) && !isSolid((int)nextX + 39, localPlayer.y + 39)) {
+                localPlayer.x = (int)nextX;
+            } else {
+                knockbackVelocityX = 0; // Stop horizontal knockback on wall hit
+            }
+            
+            // Check vertical collision
+            if (!isSolid(localPlayer.x, (int)nextY) && !isSolid(localPlayer.x + 39, (int)nextY + 39)) {
+                localPlayer.y = (int)nextY;
+            } else {
+                if (knockbackVelocityY > 0) {
+                    // Hit ground, stop knockback
+                    knockbackVelocityY = 0;
+                } else {
+                    // Hit ceiling
+                    knockbackVelocityY = 0;
+                }
+            }
+            
+            // Apply friction and gravity to knockback
+            knockbackVelocityX *= KNOCKBACK_FRICTION;
+            knockbackVelocityY += 0.8; // Gravity during knockback
+            
+            // Check if knockback should end
+            if (Math.abs(knockbackVelocityX) < KNOCKBACK_THRESHOLD && 
+                Math.abs(knockbackVelocityY) < KNOCKBACK_THRESHOLD) {
+                isKnockedBack = false;
+                knockbackVelocityX = 0;
+                knockbackVelocityY = 0;
+                vy = 0;
+            }
+            
+            if (ssm != null) {
+                ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+            }
+            return; // Skip normal movement during knockback
+        }
+
+        // Normal movement (when not knocked back)
         int speed = 5;
         int nextX = localPlayer.x;
         
@@ -976,6 +1036,51 @@ public class BOOMTAG extends JFrame implements ActionListener {
         return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
     }
     
+    // Find a safe spawn location that's not inside a wall
+    private int findSafeSpawnX() {
+        // Try to find a safe spawn point by checking multiple positions
+        int[] possibleSpawns = {200, 400, 600, 800, 1000, 300, 500, 700, 900, 100, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1050};
+        
+        for (int x : possibleSpawns) {
+            // Skip if this spawn point is already used
+            if (usedSpawnPoints.contains(x)) {
+                continue;
+            }
+            
+            // Check if this position is safe (not solid and has ground below)
+            boolean topLeftClear = !isSolid(x, 50);
+            boolean topRightClear = !isSolid(x + 39, 50);
+            boolean bottomLeftClear = !isSolid(x, 89);
+            boolean bottomRightClear = !isSolid(x + 39, 89);
+            
+            // Check if there's ground below (within reasonable distance)
+            boolean hasGroundBelow = false;
+            for (int checkY = 90; checkY < 700; checkY += 45) {
+                if (isSolid(x, checkY) || isSolid(x + 39, checkY)) {
+                    hasGroundBelow = true;
+                    break;
+                }
+            }
+            
+            // If all corners are clear and there's ground below, this is a safe spawn
+            if (topLeftClear && topRightClear && bottomLeftClear && bottomRightClear && hasGroundBelow) {
+                usedSpawnPoints.add(x); // Mark this spawn point as used
+                return x;
+            }
+        }
+        
+        // If no safe spawn found, find any unused position from the list
+        for (int x : possibleSpawns) {
+            if (!usedSpawnPoints.contains(x)) {
+                usedSpawnPoints.add(x);
+                return x;
+            }
+        }
+        
+        // Absolute fallback - return center of screen
+        return 640;
+    }
+    
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
@@ -995,11 +1100,21 @@ public class BOOMTAG extends JFrame implements ActionListener {
                     players.get(other.name).isIt = true;
                 }
                 
-                // Knockback
-                if (localPlayer.x < other.x) localPlayer.x -= 50;
-                else localPlayer.x += 50;
+                // Calculate knockback direction
+                double dx = localPlayer.x - other.x;
+                double dy = localPlayer.y - other.y;
+                double distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Normalize and apply knockback force (only to local player)
+                if (distance > 0) {
+                    double knockbackForce = 12.0;
+                    knockbackVelocityX = (dx / distance) * knockbackForce;
+                    knockbackVelocityY = -8.0; // Upward knockback
+                    isKnockedBack = true;
+                }
                 
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
+                break; // Only tag one player at a time
             }
         }
     }
@@ -1009,6 +1124,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         graceCountdown.stop();
         gameActive = false;
         gracePeriod = false;
+        usedSpawnPoints.clear(); // Clear spawn points for next game
         this.setContentPane(endPanel);
         this.revalidate();
         this.repaint();
@@ -1074,25 +1190,68 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
     private class endPanel extends JPanel{
 
-        public endPanel(){
-            this.setPreferredSize(new Dimension(1280,720));
-            this.setLayout(null);
-        }
+    public endPanel(){
+        this.setPreferredSize(new Dimension(1280,720));
+        this.setLayout(null);
 
-        @Override
-        public void paintComponent(Graphics g){
-            super.paintComponent(g);
-        
-            g.setColor(new Color(0, 0, 0, 220));
-                g.fillRect(0, 0, 1280, 720);
-                g.setColor(Color.YELLOW);
-                g.setFont(new Font("Arial", Font.BOLD, 60));
-                String winText = "GAME OVER! WINNER: " + winnerName;
-                int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
-                g.drawString(winText, x, 360);
+        JButton connectBtn = new JButton("Return to Main Menu");
+        connectBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        connectBtn.setFont(new Font("Serif", Font.PLAIN, 28));
+        connectBtn.setForeground(new Color(200, 200, 200));
+        connectBtn.setFocusPainted(false);
+        connectBtn.setContentAreaFilled(false);
+        connectBtn.setBorderPainted(false);
+        connectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        connectBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                connectBtn.setText("◈  " + "Return to Main Menu" + "  ◈");
+                connectBtn.setForeground(Color.WHITE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                connectBtn.setText("Return to Main Menu");
+                connectBtn.setForeground(new Color(200, 200, 200));
+            }
             
-        }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Reset game state and return to menu
+                gameActive = false;
+                gameOver = false;
+                gracePeriod = false;
+                isKnockedBack = false;
+                knockbackVelocityX = 0;
+                knockbackVelocityY = 0;
+                usedSpawnPoints.clear(); // Clear spawn points when returning to menu
+                players.clear();
+                cardLayout.show(mainContainer, "MENU");
+                setContentPane(mainContainer);
+                revalidate();
+                repaint();
+            }
+        });
+        
+        connectBtn.setBounds(440, 500, 400, 50); // Set bounds since you're using null layout
+        
+        this.add(connectBtn); // Changed from endPanel.add(connectBtn)
     }
+
+    @Override
+    public void paintComponent(Graphics g){
+        super.paintComponent(g);
+    
+        g.setColor(new Color(0, 0, 0, 220));
+        g.fillRect(0, 0, 1280, 720);
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 60));
+        String winText = "GAME OVER! WINNER: " + winnerName;
+        int x = (1280 - g.getFontMetrics().stringWidth(winText)) / 2;
+        g.drawString(winText, x, 360);
+    }
+}
 
     private class GamePanel extends JPanel {
         @Override
@@ -1157,6 +1316,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     public static void main(String[] args) {
-        new BOOMTAG();
+        new boomtagtest();
     }
 }
