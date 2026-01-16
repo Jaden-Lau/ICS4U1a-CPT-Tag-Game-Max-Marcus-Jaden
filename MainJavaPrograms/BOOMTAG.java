@@ -5,7 +5,6 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -783,21 +782,19 @@ public class BOOMTAG extends JFrame implements ActionListener {
     // Logics
     private void handleNetworkMessage(String msg) {
         if (msg.startsWith("JOINED:") && modeChooser.getSelectedItem().equals("Server")) {
-
-        String[] data = msg.substring(7).split(",");
-        String user = data[0];
-        int colorIdx = Integer.parseInt(data[1]);
-
-        Point spawn = getSpawnPoint();  
-        Player p = new Player(spawn.x, spawn.y, playerColors[colorIdx], user);
-        players.put(user, p);
-
-        ssm.sendText("SPAWN:" + user + "," + spawn.x + "," + spawn.y + "," + colorIdx);
+            String[] data = msg.substring(7).split(",");
+            String user = data[0];
+            int colorIdx = Integer.parseInt(data[1]);
+            
+            Point spawn = getSpawnPoint();
+            Player p = new Player(spawn.x, spawn.y, playerColors[colorIdx], user);
+            players.put(user, p);
+            
+            // Broadcast spawn info to all clients
+            ssm.sendText("SPAWN:" + user + "," + spawn.x + "," + spawn.y + "," + colorIdx);
         }
-
         else if (msg.startsWith("SPAWN:")) {
             String[] data = msg.substring(6).split(",");
-
             String user = data[0];
             int x = Integer.parseInt(data[1]);
             int y = Integer.parseInt(data[2]);
@@ -806,11 +803,11 @@ public class BOOMTAG extends JFrame implements ActionListener {
             Player p = new Player(x, y, playerColors[colorIdx], user);
             players.put(user, p);
 
+            // Set localPlayer if this is our player
             if (user.equals(myUsername)) {
                 localPlayer = p;
             }
         }
-
         else if (msg.startsWith("POS:")) {
             String[] data = msg.substring(4).split(",");
             String user = data[0];
@@ -938,20 +935,19 @@ public class BOOMTAG extends JFrame implements ActionListener {
     }
 
     private void loadMap(String fileName) {
-        spawnPoints.clear();
-
+        spawnPoints.clear(); // Clear previous spawn points
+        
         File mapFile = new File("MAPS/" + fileName);
         try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
             String line;
             int row = 0;
-
             while ((line = br.readLine()) != null && row < 16) {
                 String[] tiles = line.split(",");
-
-                for (int col = 0; col < 16; col++) {
+                for (int col = 0; col < Math.min(tiles.length, 16); col++) {
                     String tile = tiles[col].trim();
                     mapData[row][col] = tile;
-
+                    
+                    // Extract spawn points from "sp" tiles
                     if (tile.equals("sp")) {
                         int x = col * 80;
                         int y = (row * 45) - 40 - 5;
@@ -961,16 +957,33 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 row++;
             }
         } catch (IOException e) {
-            System.out.println("Map load failed: " + fileName);
+            System.out.println("File Error: Could not find " + fileName);
         }
     }
 
+    private Point getSpawnPoint() {
+        java.util.Collections.shuffle(spawnPoints);
 
+        for (Point p : spawnPoints) {
+            boolean used = false;
+            // Check if any existing player is at this spawn point
+            for (Player pl : players.values()) {
+                if (pl.x == p.x && pl.y == p.y) {
+                    used = true;
+                    break;
+                }
+            }
+            if (!used) return p;
+        }
+
+        // Fallback to first spawn point if all are occupied
+        return spawnPoints.isEmpty() ? new Point(640, 50) : spawnPoints.get(0);
+    }
     private void handleMovement() {
         if (!gameActive) return;
         if (localPlayer == null) return;
         if (!localPlayer.isAlive) return;
-
+        if (gracePeriod) return;
 
         // Handle knockback physics
         if (isKnockedBack) {
@@ -1060,24 +1073,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         return mapData[row][col].equals("bg") || mapData[row][col].equals("tg");
     }
     
-        private Point getSpawnPoint() {
-        Collections.shuffle(spawnPoints);
-
-        for (Point p : spawnPoints) {
-            boolean used = false;                       //puts players in spawn points and makes them used so other players won't be put there
-            for (Player pl : players.values()) {
-                if (pl.x == p.x && pl.y == p.y) {
-                    used = true;
-                    break;
-                }
-            }
-            if (!used) return p;
-        }
-
-        return spawnPoints.get(0); // fallback so players will just default to first point
-    }
-
-    
     private void checkCollisions() {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
@@ -1122,7 +1117,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
         graceCountdown.stop();
         gameActive = false;
         gracePeriod = false;
-        this.setContentPane(endPanel);
+        spawnPoints.clear(); // Clear spawn points
+        mainContainer.add(endPanel, "END");
+        cardLayout.show(mainContainer, "END");
         this.revalidate();
         this.repaint();
     }
@@ -1216,13 +1213,29 @@ public class BOOMTAG extends JFrame implements ActionListener {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Reset game state and return to menu
+                if (ssm != null) {
+                    ssm.disconnect();
+                    ssm = null;
+                }
+                connectBtn.setVisible(true);
+                connectBackBtn.setVisible(true);
+                waitingLabel.setVisible(false); 
                 gameActive = false;
                 gameOver = false;
                 gracePeriod = false;
                 isKnockedBack = false;
+
                 knockbackVelocityX = 0;
                 knockbackVelocityY = 0;
+                vy = 0;
+
                 players.clear();
+                spawnPoints.clear();
+                localPlayer = null;
+                winnerName = "";
+
+                bombCountdown.stop();
+                graceCountdown.stop();
                 cardLayout.show(mainContainer, "MENU");
                 setContentPane(mainContainer);
                 revalidate();
@@ -1254,20 +1267,20 @@ public class BOOMTAG extends JFrame implements ActionListener {
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             // Draw Map
-            if (mapData[0][0] == null) return;
-                    for (int r = 0; r < 16; r++) {
-                        for (int c = 0; c < 16; c++) {
-                            int x = c * 80;
-                            int y = r * 45;
-                            if (mapData[r][c] == null) continue;
-                            
-                            if (mapData[r][c].equals("bg") && groundBtm != null) g.drawImage(groundBtm, x, y, 80, 45, null);
-                            else if (mapData[r][c].equals("tg") && groundTop != null) g.drawImage(groundTop, x, y, 80, 45, null);
-                            else if (mapData[r][c].equals("bs") && skyBtm != null) g.drawImage(skyBtm, x, y, 80, 45, null);
-                            else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
-                            else if (mapData[r][c].equals("sp") && groundTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
-                        }
+            if (mapData[0][0] != null) {
+                for (int r = 0; r < 16; r++) {
+                    for (int c = 0; c < 16; c++) {
+                        int x = c * 80;
+                        int y = r * 45;
+                        if (mapData[r][c] == null) continue;
+                        
+                        if (mapData[r][c].equals("bg") && groundBtm != null) g.drawImage(groundBtm, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("tg") && groundTop != null) g.drawImage(groundTop, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
+                        else if (mapData[r][c].equals("sp") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
                     }
+                }
+            }
             
             // Draw Scoreboard
             if (players.size() > 0) {
