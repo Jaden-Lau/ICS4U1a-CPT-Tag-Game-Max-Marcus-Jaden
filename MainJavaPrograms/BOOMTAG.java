@@ -781,95 +781,179 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
     // Logics
     private void handleNetworkMessage(String msg) {
-        if (msg.startsWith("JOINED:")) {
-            String[] data = msg.substring(7).split(",");
-            String user = data[0];
-            int colorIdx = Integer.parseInt(data[1]);
-            // Find a safe spawn point
-            int spawnX = findSafeSpawnX();
-            players.put(user, new Player(spawnX, 50, playerColors[colorIdx], user));
-        }
-        else if (msg.startsWith("POS:")) {
-            String[] data = msg.substring(4).split(",");
-            String user = data[0];
-            int newX = Integer.parseInt(data[1]);
-            int newY = Integer.parseInt(data[2]);
-
-            if (players.containsKey(user)) {
-                players.get(user).x = newX;
-                players.get(user).y = newY;
-            }
-        }
-        else if (msg.startsWith("TAGGED:")) {
-            String target = msg.substring(7);
-            for (Player p : players.values()) p.isIt = false;
-            if (players.containsKey(target)) {
-                players.get(target).isIt = true;
-            }
-        }
-        if (msg.startsWith("EXPLODE:")) {
-                String loser = msg.substring(8);
-                System.out.println(loser + " went BOOM!");
-                roundsPlayed += 1;
-                graceTimer = 5;
-                
-                if (players.containsKey(loser)){
-                    players.get(loser).isAlive = false;
-                    players.get(loser).isIt = false;
-                }
-                //Adjust scoreobard
-                for (Player p : players.values()) {
-                    if (!p.name.equals(loser) && p.isAlive) {
-                        p.score++;
-                        System.out.println("Client side - added 1 to " + p);
-                    }
-                }
-            }
-        else if (msg.startsWith("TIME:")) {
-            bombTimer = Integer.parseInt(msg.substring(5));
-        }
-
-        if (msg.startsWith("GRACETIME:")) {
-                graceTimer = Integer.parseInt(msg.substring(10));
-                gracePeriod = true;
-                if (graceTimer <= 0){
-                    gracePeriod = false;
-                }
-            }
-
-            if (msg.startsWith("GAMEOVER:")){
-                winnerName = msg.substring(9);
-                endGame();  
-            }
+    System.out.println("[" + (modeChooser.getSelectedItem().equals("Server") ? "SERVER" : "CLIENT") + "] Received: " + msg);
+    
+    // ===== JOINED MESSAGE =====
+    if (msg.startsWith("JOINED:")) {
+        String[] data = msg.substring(7).split(",");
+        String user = data[0];
+        int colorIdx = Integer.parseInt(data[1]);
         
-        else if (msg.startsWith("CHAT:")) {
-            String[] parts = msg.split(":", 3);
+        // SERVER ONLY: When server receives JOINED from a client
+        if (modeChooser.getSelectedItem().equals("Server")) {
+            
+            int spawnX = findSafeSpawnX();
+            
+            // Add player to server's HashMap
+            Player newPlayer = new Player(spawnX, 50, playerColors[colorIdx], user);
+            players.put(user, newPlayer);
+            
+            System.out.println("[SERVER] New player joined: " + user + " at x=" + spawnX);
+            
+            
+            ssm.sendText("SPAWN:" + user + "," + colorIdx + "," + spawnX);
+            
+            
+            for (Player p : players.values()) {
+                if (!p.name.equals(user)) {
+                    String existingMsg = "SPAWN:" + p.name + "," + getColorIndex(p.color) + "," + p.x;
+                    ssm.sendText(existingMsg);
+                    System.out.println("[SERVER] Sending existing player to new client: " + existingMsg);
+                }
+            }
+        }
+        // CLIENT: Should never receive raw JOINED (server converts to SPAWN)
+    }
+    
+    // ===== SPAWN MESSAGE  =====
+    else if (msg.startsWith("SPAWN:")) {
+        String[] data = msg.substring(6).split(",");
+        String user = data[0];
+        int colorIdx = Integer.parseInt(data[1]);
+        int spawnX = Integer.parseInt(data[2]);
+        
+        System.out.println("[CLIENT] Spawning player: " + user + " at x=" + spawnX);
+        
+        
+        if (!user.equals(myUsername)) {
+            Player newPlayer = new Player(spawnX, 50, playerColors[colorIdx], user);
+            players.put(user, newPlayer);
+            System.out.println("[CLIENT] Added remote player: " + user);
+        } else {
+            // Update your own position to match server
+            if (localPlayer != null) {
+                localPlayer.x = spawnX;
+                System.out.println("[CLIENT] Updated own position to server's spawn: " + spawnX);
+            }
+        }
+    }
+    
+    // ===== POSITION UPDATES =====
+    else if (msg.startsWith("POS:")) {
+        String[] data = msg.substring(4).split(",");
+        String user = data[0];
+        int newX = Integer.parseInt(data[1]);
+        int newY = Integer.parseInt(data[2]);
+        
+        // SERVER: Broadcast to all other clients
+        if (modeChooser.getSelectedItem().equals("Server")) {
+            ssm.sendText(msg);
+        }
+        
+        // EVERYONE: Update position
+        if (!user.equals(myUsername) && players.containsKey(user)) {
+            players.get(user).x = newX;
+            players.get(user).y = newY;
+        }
+    }
+    
+    // ===== TAG EVENTS =====
+    else if (msg.startsWith("TAGGED:")) {
+        String target = msg.substring(7);
+        
+        // SERVER: Broadcast to all clients
+        if (modeChooser.getSelectedItem().equals("Server")) {
+            ssm.sendText(msg);
+        }
+        
+        // EVERYONE: Update who is IT
+        for (Player p : players.values()) p.isIt = false;
+        if (players.containsKey(target)) {
+            players.get(target).isIt = true;
+        }
+    }
+    
+    // ===== EXPLOSION =====
+    else if (msg.startsWith("EXPLODE:")) {
+        String loser = msg.substring(8);
+        System.out.println(loser + " went BOOM!");
+        roundsPlayed += 1;
+        graceTimer = 5;
+        
+        if (players.containsKey(loser)){
+            players.get(loser).isAlive = false;
+            players.get(loser).isIt = false;
+        }
+        
+        // Adjust scoreboard
+        for (Player p : players.values()) {
+            if (!p.name.equals(loser) && p.isAlive) {
+                p.score++;
+            }
+        }
+    }
+    
+    // ===== TIMERS =====
+    else if (msg.startsWith("TIME:")) {
+        bombTimer = Integer.parseInt(msg.substring(5));
+    }
+    else if (msg.startsWith("GRACETIME:")) {
+        graceTimer = Integer.parseInt(msg.substring(10));
+        gracePeriod = true;
+        if (graceTimer <= 0){
+            gracePeriod = false;
+        }
+    }
+    
+    // ===== GAME OVER =====
+    else if (msg.startsWith("GAMEOVER:")){
+        winnerName = msg.substring(9);
+        endGame();  
+    }
+    
+    // ===== CHAT =====
+    else if (msg.startsWith("CHAT:")) {
+        String[] parts = msg.split(":", 3);
+        if (parts.length >= 3) {
+            // SERVER: Broadcast to all clients
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                ssm.sendText(msg);
+            }
             chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
         }
-
-        else if (msg.startsWith("LOBBY:")) {
-            currentPlayers = Integer.parseInt(msg.substring(6));
-            updateLobbyLabel();
-        }
-
-        
-        // Server: Client joined
-        if (modeChooser.getSelectedItem().equals("Server") && msg.equals("JOIN")) {
+    }
+    
+    // ===== LOBBY =====
+    else if (msg.startsWith("LOBBY:")) {
+        currentPlayers = Integer.parseInt(msg.substring(6));
+        updateLobbyLabel();
+    }
+    
+    // ===== CONNECTION =====
+    else if (msg.equals("JOIN")) {
+        // SERVER ONLY: Client wants to join
+        if (modeChooser.getSelectedItem().equals("Server")) {
             currentPlayers++;
             ssm.sendText("LOBBY:" + currentPlayers);
             updateLobbyLabel();
             cardLayout.show(mainContainer, "MAP_SELECT");
-        } 
-        // Client: Server selected map
-        else if (!modeChooser.getSelectedItem().equals("Server") && (msg.equals("MAP:1") || msg.equals("MAP:2"))) {
+        }
+    }
+    
+    // ===== MAP SELECTION =====
+    else if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
+        // CLIENT ONLY: Server selected a map
+        if (!modeChooser.getSelectedItem().equals("Server")) {
             String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
             loadMap(mapFile);
             startGameSession();
         }
     }
+}
 
     private void handleConnection() {
         if (modeChooser.getSelectedItem().equals("Server")) {
+            // Server mode: Create a server socket and wait for connections
             ssm = new SuperSocketMaster(1234, this);
             currentPlayers = 1;
             updateLobbyLabel();
@@ -878,6 +962,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 waitingLabel.setVisible(true);
             }
         } else {
+            // Client mode: Connect to the server IP
             String ip = IPAdressField.getText();
             ssm = new SuperSocketMaster(ip, 1234, this);
             if (ssm.connect()) {
@@ -886,9 +971,16 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 waitingLabel.setVisible(true);
                 connectBtn.setVisible(false);
                 connectBackBtn.setVisible(false);
-                
             }
         }
+    }
+    private int getColorIndex(Color color) {
+        for (int i = 0; i < playerColors.length; i++) {
+            if (playerColors[i].equals(color)) {
+                return i;
+            }
+        }
+        return 0; // Default to first color
     }
 
     private void handleMapSelection(String mapFile) {
@@ -900,12 +992,25 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void startGameSession() {
         SwingUtilities.invokeLater(() -> {
             myUsername = username.getText();
-            // Find a safe spawn point
-            int spawnX = findSafeSpawnX();
-            localPlayer = new Player(spawnX, 50, playerColors[currentColorIndex], myUsername);
+            
+            // CLIENT: Create temporary local player (server will send authoritative position)
+            if (!modeChooser.getSelectedItem().equals("Server")) {
+                localPlayer = new Player(640, 50, playerColors[currentColorIndex], myUsername);
+            } 
+            // SERVER: Create local player with safe spawn
+            else {
+                int spawnX = findSafeSpawnX();
+                localPlayer = new Player(spawnX, 50, playerColors[currentColorIndex], myUsername);
+            }
+            
+            // Add to HashMap (same object reference!)
             players.put(myUsername, localPlayer);
+            
             gameActive = true;
+            
+            // Send JOINED to server (server will respond with SPAWN)
             ssm.sendText("JOINED:" + myUsername + "," + currentColorIndex);
+            
             chatPanel.setVisible(true);
             cardLayout.show(mainContainer, "GAME");
             this.requestFocusInWindow();
@@ -916,6 +1021,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 gracePeriod = true;
                 graceCountdown.start();
             }
+            
+            System.out.println("[" + (modeChooser.getSelectedItem().equals("Server") ? "SERVER" : "CLIENT") + 
+                            "] Started game session as: " + myUsername);
         });
     }
 
@@ -1079,17 +1187,24 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
         if (!localPlayer.isAlive) return;
-        if (isKnockedBack) return; // Don't check collisions during knockback
+        if (isKnockedBack) return;
 
         for (Player other : players.values()) {
-            if (other == localPlayer) continue;
+            if (other.name.equals(myUsername)) continue; // Changed from == to .equals()
             if (!other.isAlive) continue;
+            
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
             if (myRect.intersects(otherRect)) {
                 localPlayer.isIt = false;
-                ssm.sendText("TAGGED:" + other.name);
+                
+                
+                if (ssm != null) {
+                    ssm.sendText("TAGGED:" + other.name);
+                }
+                
+                // Update locally
                 for (Player p : players.values()) p.isIt = false;
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
@@ -1100,16 +1215,15 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 double dy = localPlayer.y - other.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Normalize and apply knockback force
                 if (distance > 0) {
                     double knockbackForce = 12.0;
                     knockbackVelocityX = (dx / distance) * knockbackForce;
-                    knockbackVelocityY = -8.0; // Upward knockback
+                    knockbackVelocityY = -8.0;
                     isKnockedBack = true;
+                    System.out.println("[DEBUG] " + myUsername + " knocked back! Velocity: " + knockbackVelocityX);
                 }
                 
-                ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
-                break; // Only tag one player at a time
+                break;
             }
         }
     }
