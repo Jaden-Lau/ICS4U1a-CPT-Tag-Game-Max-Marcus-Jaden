@@ -978,7 +978,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             if (ssm != null) {
                 ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
             }
-            isKnockedBack = false;
             return; // Skip normal movement during knockback
         }
 
