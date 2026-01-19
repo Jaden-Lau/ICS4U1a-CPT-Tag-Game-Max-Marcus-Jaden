@@ -45,13 +45,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
     boolean gracePeriod = false;
     boolean gameOver = false;
     int roundsPlayed = 0;
-
-    // Knockback properties
-    boolean isKnockedBack = false;
-    double knockbackVelocityX = 0;
-    double knockbackVelocityY = 0;
-    final double KNOCKBACK_FRICTION = 0.85;
-    final double KNOCKBACK_THRESHOLD = 0.5;
     
     // Track used spawn points
     java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
@@ -795,7 +788,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             int spawnX = findSafeSpawnX();
             
             // Add player to server's HashMap
-            Player newPlayer = new Player(spawnX, 50, playerColors[colorIdx], user);
+            Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
             players.put(user, newPlayer);
             
             System.out.println("[SERVER] New player joined: " + user + " at x=" + spawnX);
@@ -826,7 +819,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         
         
         if (!user.equals(myUsername)) {
-            Player newPlayer = new Player(spawnX, 50, playerColors[colorIdx], user);
+            Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
             players.put(user, newPlayer);
             System.out.println("[CLIENT] Added remote player: " + user);
         } else {
@@ -995,12 +988,12 @@ public class BOOMTAG extends JFrame implements ActionListener {
             
             // CLIENT: Create temporary local player (server will send authoritative position)
             if (!modeChooser.getSelectedItem().equals("Server")) {
-                localPlayer = new Player(640, 50, playerColors[currentColorIndex], myUsername);
+                localPlayer = new Player(640, 45, playerColors[currentColorIndex], myUsername);
             } 
             // SERVER: Create local player with safe spawn
             else {
                 int spawnX = findSafeSpawnX();
-                localPlayer = new Player(spawnX, 50, playerColors[currentColorIndex], myUsername);
+                localPlayer = new Player(spawnX, 45, playerColors[currentColorIndex], myUsername);
             }
             
             // Add to HashMap (same object reference!)
@@ -1049,45 +1042,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (localPlayer == null) return;
         if (!localPlayer.isAlive) return;
         if (gracePeriod) return;
-
-        // Handle knockback physics
-        if (isKnockedBack) {
-            // Apply knockback velocity
-            int nextX = (int)(localPlayer.x + knockbackVelocityX);
-            int nextY = (int)(localPlayer.y + knockbackVelocityY);
-            
-            // Check horizontal collision
-            if (!isSolid(nextX, localPlayer.y) && !isSolid(nextX + 39, localPlayer.y + 39)) {
-                localPlayer.x = nextX;
-            } else {
-                knockbackVelocityX = 0; // Stop horizontal knockback on wall hit
-            }
-            
-            // Check vertical collision
-            if (!isSolid(localPlayer.x, nextY) && !isSolid(localPlayer.x + 39, nextY + 39)) {
-                localPlayer.y = nextY;
-            } else {
-                knockbackVelocityY = 0; // Stop vertical knockback on wall/ground hit
-            }
-            
-            // Apply friction and gravity to knockback
-            knockbackVelocityX *= KNOCKBACK_FRICTION;
-            knockbackVelocityY += 0.5; // Gravity during knockback
-            
-            // Check if knockback should end
-            if (Math.abs(knockbackVelocityX) < KNOCKBACK_THRESHOLD && 
-                Math.abs(knockbackVelocityY) < KNOCKBACK_THRESHOLD) {
-                isKnockedBack = false;
-                knockbackVelocityX = 0;
-                knockbackVelocityY = 0;
-                vy = 0;
-            }
-            
-            if (ssm != null) {
-                ssm.sendText("POS:" + myUsername + "," + localPlayer.x + "," + localPlayer.y);
-            }
-            return; // Skip normal movement during knockback
-        }
 
         // Normal movement (when not knocked back)
         int speed = 5;
@@ -1187,7 +1141,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
         if (!localPlayer.isAlive) return;
-        if (isKnockedBack) return;
 
         for (Player other : players.values()) {
             if (other.name.equals(myUsername)) continue; // Changed from == to .equals()
@@ -1209,21 +1162,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
                 }
-
-                // Calculate knockback direction
-                double dx = localPlayer.x - other.x;
-                double dy = localPlayer.y - other.y;
-                double distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < 20) {
-                    double knockbackForce = 12.0;
-                    knockbackVelocityX = (dx / distance) * knockbackForce;
-                    knockbackVelocityY = -8.0;
-                    isKnockedBack = true;
-                    System.out.println("[DEBUG] " + myUsername + " knocked back! Velocity: " + knockbackVelocityX);
-                }
-                
-                break;
             }
         }
     }
@@ -1339,10 +1277,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 gameActive = false;
                 gameOver = false;
                 gracePeriod = false;
-                isKnockedBack = false;
 
-                knockbackVelocityX = 0;
-                knockbackVelocityY = 0;
                 vy = 0;
 
                 players.clear();
