@@ -46,8 +46,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     boolean gameOver = false;
     int roundsPlayed = 0;
     int tagImmune;
-    Timer tagImmuneTimer = new Timer(1000, this);
     boolean immune = false;
+    Timer freezeTimer = null;
+    Timer immunityTimer = null;
     
     // Track used spawn points
     java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
@@ -691,11 +692,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             checkCollisions();
             gamePanel.repaint();
         } 
-
-        else if (evt.getSource() == tagImmuneTimer && modeChooser.getSelectedItem().equals("Server")){
-            tagImmune --;
-            ssm.sendText("IMMUNE:" + tagImmune);
-        }
         
         // Bomb Logic (Server)
         else if(evt.getSource() == bombCountdown && modeChooser.getSelectedItem().equals("Server")){
@@ -862,9 +858,43 @@ public class BOOMTAG extends JFrame implements ActionListener {
             }
             
             // EVERYONE: Update who is IT
-            for (Player p : players.values()) p.isIt = false;
+            for (Player p : players.values()) {
+                p.isIt = false;
+                p.isImmune = false;
+                p.isFrozen = false; 
+            }
+
             if (players.containsKey(target)) {
                 players.get(target).isIt = true;
+                players.get(target).isFrozen = true; 
+                // Start Freeze  Timer
+                if (target.equals(myUsername)) {
+                    if (freezeTimer != null) freezeTimer.stop();
+                    freezeTimer = new Timer(2000, new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            localPlayer.isFrozen = false;
+                            if (ssm != null) ssm.sendText("UNFROZEN:" + myUsername);
+                            ((Timer)e.getSource()).stop();
+                        }
+                    });
+                    freezeTimer.setRepeats(false);
+                    freezeTimer.start();
+                }
+            }
+        }
+
+        else if (msg.startsWith("UNFROZEN:")) {
+            String user = msg.substring(9);
+            if (players.containsKey(user)) {
+                players.get(user).isFrozen = false;
+            }
+        }
+
+        else if (msg.startsWith("UNIMMUNE:")) {
+            String user = msg.substring(9);
+            if (players.containsKey(user)) {
+                players.get(user).isImmune = false;
             }
         }
 
@@ -872,7 +902,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
             String[] data = msg.substring(7).split(",");
             String immuneUser = data[0];
             tagImmune = Integer.parseInt(data[1]);
-            tagImmuneTimer.start();
             ssm.sendText("IMMUNE2" + immuneUser + "," + tagImmune);
             if(myUsername.equals(immuneUser)){
                 immune = true;
@@ -1163,35 +1192,43 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (!gameActive) return;
         if (localPlayer == null || !localPlayer.isIt) return;
         if (!localPlayer.isAlive) return;
+        if (localPlayer.isFrozen) return;
 
         for (Player other : players.values()) {
-            if (other.name.equals(myUsername)) continue; // Changed from == to .equals()
+            if (other.name.equals(myUsername)) continue;
             if (!other.isAlive) continue;
+            if (other.isImmune) continue;
             
             Rectangle myRect = new Rectangle(localPlayer.x, localPlayer.y, 40, 40);
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
             if (myRect.intersects(otherRect)) {
-                if(localPlayer.isImmune) return; // Can't tag while immune
-                if(other.isImmune) continue; // Can't tag immune players                
                 localPlayer.isIt = false;
                 localPlayer.isImmune = true;
-
-                if (ssm != null){
-                    ssm.sendText("IMMUNE:" + myUsername + "," + 3);
-                }
                 
+                // Start YOUR immunity timer (2 seconds)
+                if (immunityTimer != null) immunityTimer.stop();
+                immunityTimer = new Timer(2000, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        localPlayer.isImmune = false;
+                        if (ssm != null) ssm.sendText("UNIMMUNE:" + myUsername);
+                        ((Timer)e.getSource()).stop();
+                    }
+                });
+                immunityTimer.setRepeats(false);
+                immunityTimer.start();
                 
                 if (ssm != null) {
                     ssm.sendText("TAGGED:" + other.name);
                 }
                 
-                // Update locally
                 for (Player p : players.values()) p.isIt = false;
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
                     players.get(other.name).isFrozen = true;
                 }
+                
                 break;
             }
         }
@@ -1247,6 +1284,17 @@ public class BOOMTAG extends JFrame implements ActionListener {
         }
 
         public void draw(Graphics g) {
+
+            if(isFrozen) {
+                g.setColor(new Color(0, 150, 255, 100)); 
+                g.fillOval(x - 10, y - 10, width + 20, height + 20);
+            }
+        
+            if (isImmune) {
+                g.setColor(new Color(255, 215, 0, 100)); 
+                g.fillOval(x - 5, y - 5, width + 10, height + 10);
+            }
+
             if (isIt) {
                 g.setColor(new Color(255, 50, 50, 100)); 
                 g.fillOval(x - 10, y - 10, width + 30, height + 30);
