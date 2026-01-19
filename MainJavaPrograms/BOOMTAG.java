@@ -776,194 +776,194 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
     // Logics
     private void handleNetworkMessage(String msg) {
-    System.out.println("[" + (modeChooser.getSelectedItem().equals("Server") ? "SERVER" : "CLIENT") + "] Received: " + msg);
-    
-    // ===== JOINED MESSAGE =====
-    if (msg.startsWith("JOINED:")) {
-        String[] data = msg.substring(7).split(",");
-        String user = data[0];
-        int colorIdx = Integer.parseInt(data[1]);
+        System.out.println("[" + (modeChooser.getSelectedItem().equals("Server") ? "SERVER" : "CLIENT") + "] Received: " + msg);
         
-        // SERVER ONLY: When server receives JOINED from a client
-        if (modeChooser.getSelectedItem().equals("Server")) {
+        // ===== JOINED MESSAGE =====
+        if (msg.startsWith("JOINED:")) {
+            String[] data = msg.substring(7).split(",");
+            String user = data[0];
+            int colorIdx = Integer.parseInt(data[1]);
             
-            int spawnX = findSafeSpawnX();
+            // SERVER ONLY: When server receives JOINED from a client
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                
+                int spawnX = findSafeSpawnX();
+                
+                // Add player to server's HashMap
+                Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
+                players.put(user, newPlayer);
+                
+                System.out.println("[SERVER] New player joined: " + user + " at x=" + spawnX);
+                
+                
+                ssm.sendText("SPAWN:" + user + "," + colorIdx + "," + spawnX);
+                
+                
+                for (Player p : players.values()) {
+                    if (!p.name.equals(user)) {
+                        String existingMsg = "SPAWN:" + p.name + "," + getColorIndex(p.color) + "," + p.x;
+                        ssm.sendText(existingMsg);
+                        System.out.println("[SERVER] Sending existing player to new client: " + existingMsg);
+                    }
+                }
+            }
+            // CLIENT: Should never receive raw JOINED (server converts to SPAWN)
+        }
+        
+        // ===== SPAWN MESSAGE  =====
+        else if (msg.startsWith("SPAWN:")) {
+            String[] data = msg.substring(6).split(",");
+            String user = data[0];
+            int colorIdx = Integer.parseInt(data[1]);
+            int spawnX = Integer.parseInt(data[2]);
             
-            // Add player to server's HashMap
-            Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
-            players.put(user, newPlayer);
-            
-            System.out.println("[SERVER] New player joined: " + user + " at x=" + spawnX);
+            System.out.println("[CLIENT] Spawning player: " + user + " at x=" + spawnX);
             
             
-            ssm.sendText("SPAWN:" + user + "," + colorIdx + "," + spawnX);
-            
-            
-            for (Player p : players.values()) {
-                if (!p.name.equals(user)) {
-                    String existingMsg = "SPAWN:" + p.name + "," + getColorIndex(p.color) + "," + p.x;
-                    ssm.sendText(existingMsg);
-                    System.out.println("[SERVER] Sending existing player to new client: " + existingMsg);
+            if (!user.equals(myUsername)) {
+                Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
+                players.put(user, newPlayer);
+                System.out.println("[CLIENT] Added remote player: " + user);
+            } else {
+                // Update your own position to match server
+                if (localPlayer != null) {
+                    localPlayer.x = spawnX;
+                    System.out.println("[CLIENT] Updated own position to server's spawn: " + spawnX);
                 }
             }
         }
-        // CLIENT: Should never receive raw JOINED (server converts to SPAWN)
-    }
-    
-    // ===== SPAWN MESSAGE  =====
-    else if (msg.startsWith("SPAWN:")) {
-        String[] data = msg.substring(6).split(",");
-        String user = data[0];
-        int colorIdx = Integer.parseInt(data[1]);
-        int spawnX = Integer.parseInt(data[2]);
         
-        System.out.println("[CLIENT] Spawning player: " + user + " at x=" + spawnX);
-        
-        
-        if (!user.equals(myUsername)) {
-            Player newPlayer = new Player(spawnX, 45, playerColors[colorIdx], user);
-            players.put(user, newPlayer);
-            System.out.println("[CLIENT] Added remote player: " + user);
-        } else {
-            // Update your own position to match server
-            if (localPlayer != null) {
-                localPlayer.x = spawnX;
-                System.out.println("[CLIENT] Updated own position to server's spawn: " + spawnX);
+        // ===== POSITION UPDATES =====
+        else if (msg.startsWith("POS:")) {
+            String[] data = msg.substring(4).split(",");
+            String user = data[0];
+            int newX = Integer.parseInt(data[1]);
+            int newY = Integer.parseInt(data[2]);
+            
+            // SERVER: Broadcast to all other clients
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                ssm.sendText(msg);
+            }
+            
+            // EVERYONE: Update position
+            if (!user.equals(myUsername) && players.containsKey(user)) {
+                players.get(user).x = newX;
+                players.get(user).y = newY;
             }
         }
-    }
-    
-    // ===== POSITION UPDATES =====
-    else if (msg.startsWith("POS:")) {
-        String[] data = msg.substring(4).split(",");
-        String user = data[0];
-        int newX = Integer.parseInt(data[1]);
-        int newY = Integer.parseInt(data[2]);
         
-        // SERVER: Broadcast to all other clients
-        if (modeChooser.getSelectedItem().equals("Server")) {
-            ssm.sendText(msg);
-        }
-        
-        // EVERYONE: Update position
-        if (!user.equals(myUsername) && players.containsKey(user)) {
-            players.get(user).x = newX;
-            players.get(user).y = newY;
-        }
-    }
-    
-    // ===== TAG EVENTS =====
-    else if (msg.startsWith("TAGGED:")) {
-        String target = msg.substring(7);
-        
-        // SERVER: Broadcast to all clients
-        if (modeChooser.getSelectedItem().equals("Server")) {
-            ssm.sendText(msg);
-        }
-        
-        // EVERYONE: Update who is IT
-        for (Player p : players.values()) p.isIt = false;
-        if (players.containsKey(target)) {
-            players.get(target).isIt = true;
-        }
-    }
-
-    else if (msg.startsWith("IMMUNE:") && modeChooser.getSelectedItem().equals("Server")){
-        String[] data = msg.substring(7).split(",");
-        String immuneUser = data[0];
-        tagImmune = Integer.parseInt(data[1]);
-        tagImmuneTimer.start();
-        ssm.sendText("IMMUNE2" + immuneUser + "," + tagImmune);
-        if(myUsername.equals(immuneUser)){
-            immune = true;
-        }
-        if (tagImmune == 0){
-            immune = false;
-        }
-    }
-
-    else if (msg.startsWith("IMMUNE2:") && modeChooser.getSelectedItem().equals("Client")){
-        String[] data = msg.substring(8).split(",");
-        String immuneUser = data[0];
-        tagImmune = Integer.parseInt(data[1]);
-        if(myUsername.equals(immuneUser)){
-            immune = true;
-        }
-        if (tagImmune == 0){
-            immune = false;
-        }
-    }
-    
-    // ===== EXPLOSION =====
-    else if (msg.startsWith("EXPLODE:")) {
-        String loser = msg.substring(8);
-        System.out.println(loser + " went BOOM!");
-        roundsPlayed += 1;
-        graceTimer = 5;
-        
-        if (players.containsKey(loser)){
-            players.get(loser).isAlive = false;
-            players.get(loser).isIt = false;
-        }
-    }
-    
-    // ===== TIMERS =====
-    else if (msg.startsWith("TIME:")) {
-        bombTimer = Integer.parseInt(msg.substring(5));
-    }
-    else if (msg.startsWith("GRACETIME:")) {
-        graceTimer = Integer.parseInt(msg.substring(10));
-        gracePeriod = true;
-        if (graceTimer <= 0){
-            gracePeriod = false;
-        }
-    }
-    
-    // ===== GAME OVER =====
-    else if (msg.startsWith("GAMEOVER:")){
-        winnerName = msg.substring(9);
-        endGame();  
-    }
-    
-    // ===== CHAT =====
-    else if (msg.startsWith("CHAT:")) {
-        String[] parts = msg.split(":", 3);
-        if (parts.length >= 3) {
+        // ===== TAG EVENTS =====
+        else if (msg.startsWith("TAGGED:")) {
+            String target = msg.substring(7);
+            
             // SERVER: Broadcast to all clients
             if (modeChooser.getSelectedItem().equals("Server")) {
                 ssm.sendText(msg);
             }
-            chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
+            
+            // EVERYONE: Update who is IT
+            for (Player p : players.values()) p.isIt = false;
+            if (players.containsKey(target)) {
+                players.get(target).isIt = true;
+            }
         }
-    }
-    
-    // Lobby
-    else if (msg.startsWith("LOBBY:")) {
-        currentPlayers = Integer.parseInt(msg.substring(6));
-        updateLobbyLabel();
-    }
-    
-    // Connection
-    else if (msg.equals("JOIN")) {
-        // SERVER ONLY: Client wants to join
-        if (modeChooser.getSelectedItem().equals("Server")) {
-            currentPlayers++;
-            ssm.sendText("LOBBY:" + currentPlayers);
+
+        else if (msg.startsWith("IMMUNE:") && modeChooser.getSelectedItem().equals("Server")){
+            String[] data = msg.substring(7).split(",");
+            String immuneUser = data[0];
+            tagImmune = Integer.parseInt(data[1]);
+            tagImmuneTimer.start();
+            ssm.sendText("IMMUNE2" + immuneUser + "," + tagImmune);
+            if(myUsername.equals(immuneUser)){
+                immune = true;
+            }
+            if (tagImmune == 0){
+                immune = false;
+            }
+        }
+
+        else if (msg.startsWith("IMMUNE2:") && modeChooser.getSelectedItem().equals("Client")){
+            String[] data = msg.substring(8).split(",");
+            String immuneUser = data[0];
+            tagImmune = Integer.parseInt(data[1]);
+            if(myUsername.equals(immuneUser)){
+                immune = true;
+            }
+            if (tagImmune == 0){
+                immune = false;
+            }
+        }
+        
+        // ===== EXPLOSION =====
+        else if (msg.startsWith("EXPLODE:")) {
+            String loser = msg.substring(8);
+            System.out.println(loser + " went BOOM!");
+            roundsPlayed += 1;
+            graceTimer = 5;
+            
+            if (players.containsKey(loser)){
+                players.get(loser).isAlive = false;
+                players.get(loser).isIt = false;
+            }
+        }
+        
+        // ===== TIMERS =====
+        else if (msg.startsWith("TIME:")) {
+            bombTimer = Integer.parseInt(msg.substring(5));
+        }
+        else if (msg.startsWith("GRACETIME:")) {
+            graceTimer = Integer.parseInt(msg.substring(10));
+            gracePeriod = true;
+            if (graceTimer <= 0){
+                gracePeriod = false;
+            }
+        }
+        
+        // ===== GAME OVER =====
+        else if (msg.startsWith("GAMEOVER:")){
+            winnerName = msg.substring(9);
+            endGame();  
+        }
+        
+        // ===== CHAT =====
+        else if (msg.startsWith("CHAT:")) {
+            String[] parts = msg.split(":", 3);
+            if (parts.length >= 3) {
+                // SERVER: Broadcast to all clients
+                if (modeChooser.getSelectedItem().equals("Server")) {
+                    ssm.sendText(msg);
+                }
+                chatTextArea.append("\n" + parts[1] + ": " + parts[2]);
+            }
+        }
+        
+        // Lobby
+        else if (msg.startsWith("LOBBY:")) {
+            currentPlayers = Integer.parseInt(msg.substring(6));
             updateLobbyLabel();
-            cardLayout.show(mainContainer, "MAP_SELECT");
+        }
+        
+        // Connection
+        else if (msg.equals("JOIN")) {
+            // SERVER ONLY: Client wants to join
+            if (modeChooser.getSelectedItem().equals("Server")) {
+                currentPlayers++;
+                ssm.sendText("LOBBY:" + currentPlayers);
+                updateLobbyLabel();
+                cardLayout.show(mainContainer, "MAP_SELECT");
+            }
+        }
+        
+        // ===== MAP SELECTION =====
+        else if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
+            // CLIENT ONLY: Server selected a map
+            if (!modeChooser.getSelectedItem().equals("Server")) {
+                String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
+                loadMap(mapFile);
+                startGameSession();
+            }
         }
     }
-    
-    // ===== MAP SELECTION =====
-    else if (msg.equals("MAP:1") || msg.equals("MAP:2")) {
-        // CLIENT ONLY: Server selected a map
-        if (!modeChooser.getSelectedItem().equals("Server")) {
-            String mapFile = msg.equals("MAP:1") ? "map1.csv" : "map2.csv";
-            loadMap(mapFile);
-            startGameSession();
-        }
-    }
-}
 
     private void handleConnection() {
         if (modeChooser.getSelectedItem().equals("Server")) {
