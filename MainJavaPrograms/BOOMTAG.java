@@ -720,7 +720,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 graceTimer = 5;
                 graceCountdown.stop();
                 gracePeriod = false;
-                bombTimer = 15; 
+                bombTimer = 30; 
                 bombCountdown.start();    //THIS STARTS BOMB TIMER
                 pickRandomIt();
             }
