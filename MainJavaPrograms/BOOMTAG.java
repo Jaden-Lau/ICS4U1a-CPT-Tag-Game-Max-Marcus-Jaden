@@ -712,12 +712,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
                         ssm.sendText("EXPLODE:" + p.name);
                         p.isIt = false;
                         p.isAlive = false;
-                        //Adjust scoreobard
-                        for (Player v : players.values()) {
-                            if(!v.name.equals(p.name) && v.isAlive){
-                                    v.score++;
-                            }
-                        }
                         break;
                     }
                 }
@@ -910,13 +904,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (players.containsKey(loser)){
             players.get(loser).isAlive = false;
             players.get(loser).isIt = false;
-        }
-        
-        // Adjust scoreboard
-        for (Player p : players.values()) {
-            if (!p.name.equals(loser) && p.isAlive) {
-                p.score++;
-            }
         }
     }
     
@@ -1246,7 +1233,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
         int x, y, width = 40, height = 40;
         Color color;
         String name;
-        int score = 0;
         boolean isIt = false;
         boolean isAlive = true;
 
@@ -1370,22 +1356,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
                         else if (mapData[r][c].equals("bs") && skyBtm != null) g.drawImage(skyBtm, x, y, 80, 45, null);
                         else if (mapData[r][c].equals("ts") && skyTop != null) g.drawImage(skyTop, x, y, 80, 45, null);
                     }
-                }
-            }
-            
-            // Draw Scoreboard
-            if (players.size() > 0) {
-                int screenWidth = 1280;
-                int sectionWidth = screenWidth / players.size();
-                int i = 0;
-                g.setFont(new Font("Arial", Font.BOLD, 18));
-                for (Player p : players.values()) {
-                    int centerX = (i * sectionWidth) + (sectionWidth / 2);
-                    g.setColor(p.color);
-                    g.fillRect(centerX - 50, 10, 20, 20);
-                    g.setColor(Color.BLACK);
-                    g.drawString(p.name + ": " + p.score, centerX - 25, 27);
-                    i++;
                 }
             }
             
