@@ -923,13 +923,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
         }
     }
     
-    // ===== LOBBY =====
+    // Lobby
     else if (msg.startsWith("LOBBY:")) {
         currentPlayers = Integer.parseInt(msg.substring(6));
         updateLobbyLabel();
     }
     
-    // ===== CONNECTION =====
+    // Connection
     else if (msg.equals("JOIN")) {
         // SERVER ONLY: Client wants to join
         if (modeChooser.getSelectedItem().equals("Server")) {
@@ -1209,13 +1209,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
                 }
-                
+
                 // Calculate knockback direction
                 double dx = localPlayer.x - other.x;
                 double dy = localPlayer.y - other.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance > 0) {
+                if (distance > 20) {
                     double knockbackForce = 12.0;
                     knockbackVelocityX = (dx / distance) * knockbackForce;
                     knockbackVelocityY = -8.0;
