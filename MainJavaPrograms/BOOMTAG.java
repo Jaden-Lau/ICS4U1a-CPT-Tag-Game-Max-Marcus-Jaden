@@ -1287,12 +1287,12 @@ public class BOOMTAG extends JFrame implements ActionListener {
 
             if(isFrozen) {
                 g.setColor(new Color(0, 150, 255, 100)); 
-                g.fillOval(x - 10, y - 10, width + 20, height + 20);
+                g.fillOval(x - 10, y - 10, width + 30, height + 30);
             }
         
             if (isImmune) {
                 g.setColor(new Color(255, 215, 0, 100)); 
-                g.fillOval(x - 5, y - 5, width + 10, height + 10);
+                g.fillOval(x - 10, y - 10, width + 30, height + 30);
             }
 
             if (isIt) {
@@ -1311,7 +1311,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             
             g.setColor(Color.BLACK);
             g.setFont(new Font("Arial", Font.PLAIN, 12));
-            String displayName = name + (isIt ? " 💣" : "");
+            String displayName = name;
             g.drawString(displayName, x, y - 5);
         }
     }
