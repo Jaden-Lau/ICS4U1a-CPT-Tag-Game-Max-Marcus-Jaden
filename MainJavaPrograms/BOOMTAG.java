@@ -774,7 +774,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
     private void handleNetworkMessage(String msg) {
         System.out.println("[" + (modeChooser.getSelectedItem().equals("Server") ? "SERVER" : "CLIENT") + "] Received: " + msg);
         
-        // ===== JOINED MESSAGE =====
+        // Joined Message
         if (msg.startsWith("JOINED:")) {
             String[] data = msg.substring(7).split(",");
             String user = data[0];
@@ -806,7 +806,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             // CLIENT: Should never receive raw JOINED (server converts to SPAWN)
         }
         
-        // ===== SPAWN MESSAGE  =====
+        // Spawn Message
         else if (msg.startsWith("SPAWN:")) {
             String[] data = msg.substring(6).split(",");
             String user = data[0];
@@ -829,7 +829,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
             }
         }
         
-        // ===== POSITION UPDATES =====
+        // Position Updates
         else if (msg.startsWith("POS:")) {
             String[] data = msg.substring(4).split(",");
             String user = data[0];
@@ -1094,7 +1094,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (gracePeriod) return;
         if (localPlayer.isFrozen) return;
 
-        // Normal movement (when not knocked back)
+        // Normal movement
         int speed = 5;
         int nextX = localPlayer.x;
         
