@@ -1215,7 +1215,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 double dy = localPlayer.y - other.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance > 20) {
+                if (distance < 20) {
                     double knockbackForce = 12.0;
                     knockbackVelocityX = (dx / distance) * knockbackForce;
                     knockbackVelocityY = -8.0;
