@@ -45,6 +45,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
     boolean gracePeriod = false;
     boolean gameOver = false;
     int roundsPlayed = 0;
+    int tagImmune;
+    Timer tagImmuneTimer = new Timer(1000, this);
+    boolean immune = false;
     
     // Track used spawn points
     java.util.List<Integer> usedSpawnPoints = new java.util.ArrayList<>();
@@ -688,6 +691,11 @@ public class BOOMTAG extends JFrame implements ActionListener {
             checkCollisions();
             gamePanel.repaint();
         } 
+
+        else if (evt.getSource() == tagImmuneTimer && modeChooser.getSelectedItem().equals("Server")){
+            tagImmune --;
+            ssm.sendText("IMMUNE:" + tagImmune);
+        }
         
         // Bomb Logic (Server)
         else if(evt.getSource() == bombCountdown && modeChooser.getSelectedItem().equals("Server")){
@@ -863,6 +871,32 @@ public class BOOMTAG extends JFrame implements ActionListener {
         for (Player p : players.values()) p.isIt = false;
         if (players.containsKey(target)) {
             players.get(target).isIt = true;
+        }
+    }
+
+    else if (msg.startsWith("IMMUNE:") && modeChooser.getSelectedItem().equals("Server")){
+        String[] data = msg.substring(7).split(",");
+        String immuneUser = data[0];
+        tagImmune = Integer.parseInt(data[1]);
+        tagImmuneTimer.start();
+        ssm.sendText("IMMUNE2" + immuneUser + "," + tagImmune);
+        if(myUsername.equals(immuneUser)){
+            immune = true;
+        }
+        if (tagImmune == 0){
+            immune = false;
+        }
+    }
+
+    else if (msg.startsWith("IMMUNE2:") && modeChooser.getSelectedItem().equals("Client")){
+        String[] data = msg.substring(8).split(",");
+        String immuneUser = data[0];
+        tagImmune = Integer.parseInt(data[1]);
+        if(myUsername.equals(immuneUser)){
+            immune = true;
+        }
+        if (tagImmune == 0){
+            immune = false;
         }
     }
     
@@ -1150,7 +1184,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
             if (myRect.intersects(otherRect)) {
+                if(immune) return;
+                
                 localPlayer.isIt = false;
+
+                if (ssm != null){
+                    ssm.sendText("IMMUNE:" + myUsername + "," + 3);
+                }
                 
                 
                 if (ssm != null) {
