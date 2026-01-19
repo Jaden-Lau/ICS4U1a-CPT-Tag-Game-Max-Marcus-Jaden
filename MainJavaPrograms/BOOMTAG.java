@@ -1063,6 +1063,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (localPlayer == null) return;
         if (!localPlayer.isAlive) return;
         if (gracePeriod) return;
+        if (localPlayer.isFrozen) return;
 
         // Normal movement (when not knocked back)
         int speed = 5;
@@ -1171,9 +1172,10 @@ public class BOOMTAG extends JFrame implements ActionListener {
             Rectangle otherRect = new Rectangle(other.x, other.y, 40, 40);
 
             if (myRect.intersects(otherRect)) {
-                if(immune) return;
-                
+                if(localPlayer.isImmune) return; // Can't tag while immune
+                if(other.isImmune) continue; // Can't tag immune players                
                 localPlayer.isIt = false;
+                localPlayer.isImmune = true;
 
                 if (ssm != null){
                     ssm.sendText("IMMUNE:" + myUsername + "," + 3);
@@ -1188,7 +1190,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 for (Player p : players.values()) p.isIt = false;
                 if (players.containsKey(other.name)) {
                     players.get(other.name).isIt = true;
+                    players.get(other.name).isFrozen = true;
                 }
+                break;
             }
         }
     }
@@ -1235,6 +1239,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
         String name;
         boolean isIt = false;
         boolean isAlive = true;
+        boolean isImmune = false;
+        boolean isFrozen = false;
 
         public Player(int x, int y, Color color, String name) {
             this.x = x; this.y = y; this.color = color; this.name = name;
