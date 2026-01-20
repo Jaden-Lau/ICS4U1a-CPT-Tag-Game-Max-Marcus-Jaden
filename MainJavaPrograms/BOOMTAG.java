@@ -499,7 +499,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 "HOW TO PLAY\n\n" +
                 "This is a real-time multiplayer TAG game. One player is 'IT'. " +
                 "If you are IT, your goal is to tag another player. If you are not IT, " +
-                "your goal is to avoid being tagged.\n\n" +
+                "your goal is to avoid being tagged. The game lasts 45 seconds.\n" +
+                "Once any player gets tagged, they will be frozen for one second to allow\n" +
+                "the previous 'it' player a chance at running away. \n\n" +
 
                 "CONTROLS:\n\n" +
                 "W - Jump\n" +
