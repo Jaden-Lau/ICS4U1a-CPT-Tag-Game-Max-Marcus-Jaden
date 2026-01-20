@@ -496,12 +496,12 @@ public class BOOMTAG extends JFrame implements ActionListener {
             // Create the Text Area
             JTextArea textArea = new JTextArea();
             textArea.setText(
-                "HOW TO PLAY\n\n" +
+                "HOW TO PLAY\n" +
                 "This is a real-time multiplayer TAG game. One player is 'IT'. " +
                 "If you are IT, your goal is to tag another player. If you are not IT, " +
                 "your goal is to avoid being tagged. The game lasts 45 seconds.\n" +
-                "Once any player gets tagged, they will be frozen for one second to allow\n" +
-                "the previous 'it' player a chance at running away. \n\n" +
+                "Once any player gets tagged, they will be frozen for one second\n" +
+                "to allow the previous 'it' player a chance at running away. \n\n" +
 
                 "CONTROLS:\n\n" +
                 "W - Jump\n" +
@@ -517,7 +517,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 "Select Client mode if you are joining a game. Enter the IP address of the " +
                 "server and press CONNECT.\n\n" +
 
-                "NETWORKING (SSM):\n\n" +
+                "NETWORKING (SSM):\n" +
                 "This game uses SuperSocketMaster (SSM) to send messages between players. " +
                 "SSM is responsible for transmitting player movement, tag events, and chat " +
                 "messages in real time. Each message follows a specific format so the game " +
