@@ -1208,7 +1208,7 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 
                 // Start YOUR immunity timer (2 seconds)
                 if (immunityTimer != null) immunityTimer.stop();
-                immunityTimer = new Timer(2000, new ActionListener() {
+                immunityTimer = new Timer(1000, new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         localPlayer.isImmune = false;
