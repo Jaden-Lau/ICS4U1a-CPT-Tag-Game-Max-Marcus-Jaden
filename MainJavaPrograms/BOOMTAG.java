@@ -701,10 +701,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 ssm.sendText("TIME:" + bombTimer); 
             if (bombTimer <= 0) {
                 bombCountdown.stop();
-                graceCountdown.stop();
-                graceTimer = 5;
-                gracePeriod = true;
-                graceCountdown.start();
                 for (Player p : players.values()) {
                     if (p.isIt) {
                         ssm.sendText("EXPLODE:" + p.name);
@@ -713,7 +709,10 @@ public class BOOMTAG extends JFrame implements ActionListener {
                         break;
                     }
                 }
-                pickRandomIt();
+                graceCountdown.stop();
+                graceTimer = 5;
+                gracePeriod = true;
+                graceCountdown.start();
             }
         }else if(evt.getSource() == graceCountdown && modeChooser.getSelectedItem().equals("Server")){
             graceTimer--;
@@ -723,8 +722,9 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 graceCountdown.stop();
                 gracePeriod = false;
                 bombTimer = 45; 
-                bombCountdown.start();    //THIS STARTS BOMB TIMER
                 pickRandomIt();
+                bombCountdown.start();    //THIS STARTS BOMB TIMER
+                
             }
         }
 
@@ -805,7 +805,6 @@ public class BOOMTAG extends JFrame implements ActionListener {
                     }
                 }
             }
-            // CLIENT: Should never receive raw JOINED (server converts to SPAWN)
         }
         
         // Spawn Message
@@ -859,24 +858,29 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 ssm.sendText(msg);
             }
             
-            // EVERYONE: Update who is IT
+            // EVERYONE: Update who is IT - clear all states first
             for (Player p : players.values()) {
                 p.isIt = false;
                 p.isImmune = false;
                 p.isFrozen = false; 
             }
 
+            // Set the new IT player
             if (players.containsKey(target)) {
-                players.get(target).isIt = true;
-                players.get(target).isFrozen = true; 
-                // Start Freeze  Timer
+                Player newItPlayer = players.get(target);
+                newItPlayer.isIt = true;
+                newItPlayer.isFrozen = true; 
+                
+                // Start Freeze Timer (both server and client)
                 if (target.equals(myUsername)) {
                     if (freezeTimer != null) freezeTimer.stop();
                     freezeTimer = new Timer(2000, new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            localPlayer.isFrozen = false;
-                            if (ssm != null) ssm.sendText("UNFROZEN:" + myUsername);
+                            newItPlayer.isFrozen = false;
+                            if (ssm != null && modeChooser.getSelectedItem().equals("Server")) {
+                                ssm.sendText("UNFROZEN:" + myUsername);
+                            }
                             ((Timer)e.getSource()).stop();
                         }
                     });
@@ -1253,6 +1257,13 @@ public class BOOMTAG extends JFrame implements ActionListener {
         if (players.isEmpty()) return;
         if (players.size() < 2) return;
         if (gameOver) return;
+
+        for (Player p : players.values()) {
+            p.isIt = false;
+            p.isImmune = false;
+            p.isFrozen = false;
+        }
+
         java.util.List<String> survivors = new java.util.ArrayList<>();
         for (Player p : players.values()) {
             if (p.isAlive) survivors.add(p.name);
@@ -1263,6 +1274,8 @@ public class BOOMTAG extends JFrame implements ActionListener {
                 ssm.sendText("TAGGED:" + newIt);
             }
             players.get(newIt).isIt = true;
+            players.get(newIt).isFrozen = true;
+
         }else if (survivors.size() == 1){
             winnerName = survivors.get(0);
             ssm.sendText("GAMEOVER:" + winnerName);
